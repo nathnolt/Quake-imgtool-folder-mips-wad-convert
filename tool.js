@@ -1,12 +1,20 @@
 // 
-// This script converts png files to a mip file, and then moves the mip files to the mips folder, 
-// and finally builds a wad file.
-//
-// Usage: node ./tool.js
+// This script is a little helper program to make using the fte imgtool a little bit more convenient.
 // 
-// put png files into the png folder.
-// the tool converts the pixels of the PNG file into the Quake palette, but you get no configuration for this, 
-// so you want to prepare the PNG files with something like Gimp, to convert it into a non fullbright quake palette friendly PNG.
+// fte imgtool: https://fte.triptohell.info/moodles/win64/
+// 
+// 
+//
+// Usage: 
+//   1. create a png and mips folder (if not exist)
+//   2. put (prepared) png files into the png folder.
+//   3. edit the tool.js file to setup your outputWadPath
+//   4. on commandline: run: node ./tool.js
+// 
+// Extra info
+//   The tool converts the pixels of the PNG file into the Quake palette, but you get no configuration for this,
+//   You want to prepare the PNG files with something like Gimp, to convert it into a non fullbright quake palette friendly PNG.
+// 
 
 
 // 0. imports
