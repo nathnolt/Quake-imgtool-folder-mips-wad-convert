@@ -3,166 +3,276 @@
 // 
 // fte imgtool: https://fte.triptohell.info/moodles/win64/
 // 
-// 
-//
 // Usage: 
-//   1. create a png folder
-//   2. create a folder inside of the png folder, this will be the name of the wad
-//   2. put (prepared) png files into that folder.
-//   3. edit the tool.js file to setup your outputWadDir
+//   2. create folders inside of this folder (or any other folder, see config.js)
+//   2. put (prepared) png files into those folders.
+//   3. edit the config.js file to setup your outputWadDir
 //   4. on commandline: run: node ./tool.js
 // 
+// 
 // Extra info
-//   The tool converts the pixels of the PNG file into the Quake palette, but you get no configuration for this,
-//   You want to prepare the PNG files with something like Gimp, to convert it into a non fullbright quake palette friendly PNG.
+//   The tool converts the pixels of the PNG file into the Quake palette, 
+//   but you get no configuration for this, You want to prepare the PNG files 
+//   with something like Gimp, to convert it into a non fullbright quake palette friendly PNG.
 // 
 
 
-// 0. imports
+// 0. initial stuff
 const fs = require('fs')
-const { exec } = require("child_process")
+const child_process = require("child_process")
 const path = require('path')
+const config = require('./config.js')
 
-// 1. define console colors, for prettier logging output
+// define console colors, for prettier logging output
 // SEE https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
 const cc = {
 	bgblue: '\u001b[44m',
+	bgcyan: '\u001b[46m',
 	bgred: '\u001b[41m',
+	bggreen: '\u001b[42m',
 	bggrey: '\u001b[48;5;238m',
 	bgorange: '\u001b[48;5;202m',
 	r: '\u001b[0m',
 }
 
-// 2. define some static vars
-const inputDir = path.normalize('./png/')
-const outputWadDir = path.normalize('C:/games/quake1/wads/_mine/')
 
-// 3. define the commands that are ran.
-function png2mipCommand(inputDir, file) {
-	return `imgtool64.exe --ext mip -c ${inputDir}/${file}`
-}
-
-function buildWadCommand(mipDir, wadName) {
-	return `imgtool64.exe -w ${outputWadDir}${wadName}.wad ${mipDir}`
-}
+// Set vars from the config
+const inputDir = normalizeFolder(config.inputDir)
+const outputWadDir = normalizeFolder(config.outpatWadDir)
+const png2mipCommand = config.png2mipCommand
+const buildWadCommand = config.buildWadCommand
+const imgtoolLog = config.imgtoolLog
+const pedanticLog = config.pedanticLog
+const toolPath = path.normalize(config.toolPath)
+const indentStr1 = '            '
 
 
-
-// 4. get all the pngs from the png folder
-const wadFolders = getFolders(inputDir)
-if(wadFolders.length == 0) {
-	console.error(cc.bgred, 'ERROR:', cc.r, 'could not find any folders in ', inputDir)
+// Check if the imgtool exists
+if(!pathExists(toolPath)) {
+	console.error(cc.bgred, 'ERROR', cc.r, toolPath, 'not found: download the program from https://fte.triptohell.info/moodles/win64/')
 	process.exit(1)
 }
 
-
-
-const createdMipsPromises = []
-for(var i=0; i<wadFolders.length;i++) {
-	const wadFolder = wadFolders[i]
-	const pngFiles = getFiles(inputDir + wadFolder, 'png')
-	if(pngFiles.length == 0) {
-		console.warn(cc.bgorange, 'WARN:', cc.r, 'could not find any PNG files in ', wadFolder)
-		continue
-	}
-	createdMipsPromises.push(doSingle(wadFolder, pngFiles))
+if(!pathExists(inputDir)) {
+	fs.mkdirSync(inputDir)
 }
 
+// Actually do work
+const folders = getFolderNames(inputDir)
+if(folders.length == 0) {
+	console.error(cc.bgred, 'ERROR', cc.r, 'could not find any folders in ', inputDir)
+	process.exit(1)
+}
+folders.forEach(doFolder)
 
+/**
+* this function checks if the wad has to be built at all.
+*/
+function doFolder(folderName) {
+	const folderPath = normalizeFolder(inputDir + folderName)
+	const pngs = getFileNames(folderPath, 'png')
+	const pngEditDateItems = getEditDates(folderPath, pngs)
+	const wadExists = pathExists(outputWadDir + folderName + '.wad')
+	
+	let wadHasToBeBuilt = false
+	if(wadExists) {
+		// compare the edit dates of the pngs and the wad, to check if we need to rebuild the wad
+		const lastPngEditDate = getLastEditDate(pngEditDateItems)
+		const wadEditDateItems = getEditDates(outputWadDir, [folderName + '.wad'])
+		const lastWadEditDate = getLastEditDate(wadEditDateItems)
+		wadHasToBeBuilt = lastPngEditDate > lastWadEditDate
+	} else {
+		wadHasToBeBuilt = true
+	}
+	
+	if(wadHasToBeBuilt) {
+		console.log('Building', cc.bgblue, (folderName + '.wad'), cc.r )
+		pngs2mipsAndBuildWad(folderName, pngEditDateItems)
+	} else {
+		console.log(cc.bggrey, (folderName + '.wad'), cc.r, 'up 2 date.')
+	}
+}
 
-function doSingle(wadFolder, pngFiles) {
-	return new Promise((resolve, reject) => {
-		console.log(wadFolder, pngFiles)
-		// 5. define an array with promises
-		const promises = []
-
-		console.log(`${cc.bggrey} Converted ${cc.r}`)
-		pngFiles.forEach((file) => {
-			const shellStr = png2mipCommand(inputDir + wadFolder, file)
-			const promise = executeShellScript(shellStr)
-			promise.then(()=>{
-				console.log(`  ${file} -> ${removeExtension(file)}.mip`)
-			}).catch((err) => {
-				console.error(`${cc.bgred}ERROR ${cc.r} @ file ${file} : ${err}`)
-			})
-			promises.push(promise)
-		})
+/**
+* 2. convert the pngs into mips and build the wad
+*/
+function pngs2mipsAndBuildWad(folderName, pngEditDateItems) {
+	const folderPath = normalizeFolder(inputDir + folderName)
+	const mipFolder = normalizeFolder(folderPath + 'mip')
+	
+	// 1. create the mip folder if it doesn't exist
+	if (!pathExists(mipFolder)){
+	    fs.mkdirSync(mipFolder)
+	}
+	
+	// 2. compare the data of the mip files and the pngs, to determine which ones need to get built.
+	let pngs2Convert
+	if(pathExists(mipFolder)) {
+		// compare the edit dates of the pngs and the mips to check which pngs we need to rebuild to mips
+		const mips = getFileNames(mipFolder, 'mip')
+		const mipEditDateItems = getEditDates(mipFolder, mips)
+		pngs2Convert = comparePngAndMipDateItems(pngEditDateItems, mipEditDateItems)
+	} else {
+		pngs2Convert = pngEditDateItems
+	}
+	
+	// 3. convert the pngs to mips
+	let mipFileNames2Move = []
+	if(pedanticLog && pngs2Convert.length > 0) { console.log(cc.bgblue, 'converted', cc.r) }
+	for(let i = 0; i < pngs2Convert.length; i++) {
+		const pngItem = pngs2Convert[i]
+		const png2mipConvertShellCommand = png2mipCommand(toolPath, (folderPath + pngItem.fileName))
+		const result = executeShellScript(png2mipConvertShellCommand)
+		if(!result.success) {
+			console.error(cc.bgred, 'imgtool ERROR', cc.r, 'Converting png to mip:', (folderPath + pngItem.fileName), result.error)
+			continue
+		}
 		
-		// 6. loop through all promises when they are settled.
-		Promise.allSettled(promises).then((results) => {
-			results.forEach((result) => {
-				if(result.status != 'fulfilled') {
-					console.error('result failed', result)
-				}
-			})
-			
-			const mipDir = moveMips(inputDir + wadFolder)
-			resolve({mipDir: mipDir, wadName: wadFolder})
-		})
-	})
-}
-
-
-
-function moveMips(inputDir) {
-	const mipDir = inputDir + '/mip'
-	if (!fs.existsSync(mipDir)){
-	    fs.mkdirSync(mipDir);
+		const mipFileName = removeExtension(pngItem.fileName) + '.mip'
+		mipFileNames2Move.push(mipFileName)
+		if(pedanticLog) { console.log(`  ${folderPath + pngItem.fileName} -> ${folderPath + mipFileName}`) }
+		if(imgtoolLog) { console.log(' ', cc.bgcyan + ' imgtool ' + cc.r, afterFirstLineIndentLog(indentStr1, result.msg)) }
 	}
 	
-	console.log('')
-	console.log(`${cc.bggrey} Moved ${cc.r}`)
-	const mipFiles = getFiles(inputDir, 'mip')
-	mipFiles.forEach((mipFile) => {
-		const oldMipPath = inputDir + '/' + mipFile
-		const newMipPath = mipDir  + '/' + mipFile
+	// 4. move the mips to the mip subfolder
+	if(pedanticLog && mipFileNames2Move.length > 0) { console.log(cc.bgblue, 'moved', cc.r) }
+	for(let i = 0; i < mipFileNames2Move.length; i++) {
+		const mipFileName = mipFileNames2Move[i]
+		const oldMipPath = folderPath + mipFileName
+		const newMipPath = mipFolder + mipFileName
 		fs.renameSync(oldMipPath, newMipPath)
-		console.log(`  ${inputDir}/${mipFile} -> ${mipDir}/${mipFile}`)
-	})
-	return mipDir
-}
-
-
-
-Promise.allSettled(createdMipsPromises).then((results) => {
-	
-	console.log('')
-	const wadPromises = []
-	for(var i = 0; i < results.length; i++) {
-		const result = results[i]
-		const obj = result.value
-		wadPromises.push(createWad(obj.mipDir, obj.wadName))
+		if(pedanticLog) { console.log(`  ${oldMipPath} -> ${newMipPath}`) }
 	}
 	
-	Promise.allSettled(wadPromises).then((results) => {
-		console.log('')
-		console.log(cc.bgblue,'Program done', cc.r)
-		process.exit(0)
-	})
-})
-
-
-
-function createWad(mipDir, wadName) {
-	return new Promise((resolve, reject) => {
-		const wadBuildStr = buildWadCommand(mipDir, wadName)
-		executeShellScript(wadBuildStr).then((data) => {
-			console.log(`${cc.bgblue} Built ${cc.r} ${outputWadDir}${wadName}.wad`)
-			resolve()
-		}).catch((err) => {
-			console.error(`${cc.bgred} Build error ${cc.r}: ${err}`)
-			reject()
-		})
-	})
+	// 5. build the wad file
+	const wadBuildShellCommand = buildWadCommand(toolPath, outputWadDir, folderName, mipFolder)
+	const result = executeShellScript(wadBuildShellCommand)
+	if(!result.success) {
+		console.error(cc.bgred, 'imgtool ERROR', cc.r, 'Building wad:', (outputWadDir + folderName), result.error)
+		return
+	}
+	
+	// 6. wad file built.
+	if(imgtoolLog) {
+		const msg = result.msg.trim()
+		if(msg != '') {
+			cc.bgcyan + ' imgtool ' + cc.r, console.log(msg)
+		}
+	}
+	console.log(cc.bggreen, (folderName + '.wad'), cc.r, 'built' )
+	console.log('')
 }
 
 
 
-// ----------------------------
-// Define the helper functions
-// ----------------------------
 
-function getFolders(dirPath) {
+
+
+// More specific helper functions
+
+/**
+* We want to return the array of png items that have a newer edit date than the mip items, 
+* or build items that don't have a mip item at all.
+*/
+function comparePngAndMipDateItems(pngEditDateItems, mipEditDateItems) {
+	const pngs2convert = []
+	for(var i = 0; i < pngEditDateItems.length; i++) {
+		const pngItem = pngEditDateItems[i]
+		const mipItem = findMip(removeExtension(pngItem.fileName), mipEditDateItems)
+		if(!mipItem) {
+			pngs2convert.push(pngItem)
+		} else {
+			// Compare the png editDate to the mip editDate
+			if(pngItem.editDate > mipItem.editDate) {
+				pngs2convert.push(pngItem)
+			}
+		}
+	}
+	return pngs2convert
+}
+
+/**
+* sub function for comparePngAndMipDateItems.
+*/
+function findMip(name, mipEditDateItems) {
+	const mipFileName = name + '.mip'
+	
+	// lsearch within mipEditDateItems for mipFileName
+	for(let i = 0; i < mipEditDateItems.length; i++) {
+		const mipItem = mipEditDateItems[i]
+		if(mipItem.fileName == mipFileName) {
+			return mipItem
+		}
+	}
+	return false
+}
+
+
+
+// More generic helper functions
+
+/**
+* Indent a string after the first line
+*/
+function afterFirstLineIndentLog(lineIndentStr, str) {
+	let strArr = str.trim().split('\n')
+	for(let i = 1; i < strArr.length; i++) {
+		strArr[i] = lineIndentStr + strArr[i]
+	}
+	return strArr.join('\n')
+}
+
+/**
+* this executes a shell script and returns true if succesfull, false if not successfull
+*/
+function executeShellScript(string) {
+	let msg
+	try {
+		msg = child_process.execSync(string, {encoding: 'utf8'})
+	} catch(e) {
+		return {success: false, error: e}
+	}
+	return {success: true, msg: msg}
+}
+
+
+/**
+* Get the edit dates of a list of filePaths
+* 
+* uses ctimeMs because that's the most recent time something has happened to the file.
+* The result is a large object with all the relevant items.
+*/
+function getEditDates(folderPath, fileNameArr) {
+	const editDates = []
+	for(let i = 0; i < fileNameArr.length; i++) {
+		const fileName = fileNameArr[i]
+		const filePath = folderPath + fileName
+		const stats = fs.lstatSync(filePath)
+		editDates.push({folderPath: folderPath, fileName: fileName, editDate: stats.ctimeMs})
+	}
+	return editDates
+}
+
+/**
+* get last edit date from an array of edit dates, created from the getEditDates function
+*/
+function getLastEditDate(editDates) {
+	let lastEditDate
+	for(let i = 0; i < editDates.length; i++) {
+		const editDateItem = editDates[i]
+		const date = editDateItem.editDate
+		if(lastEditDate == undefined || date > lastEditDate) {
+			lastEditDate = date
+		}
+	}
+	return lastEditDate
+}
+
+
+/**
+* Get a list of the folders within a folder
+*/
+function getFolderNames(dirPath) {
 	const dirItems = fs.readdirSync(dirPath, {withFileTypes: true})
 	const folders = []
 	
@@ -175,36 +285,29 @@ function getFolders(dirPath) {
 	return folders
 }
 
-function executeShellScript(string, callback) {
-	return new Promise((resolve, reject) => {
-		exec(string, function(error, stdout, stderr) {
-			if (error) {
-				reject({type: 'error', error: error})
-				return
-			}
-			
-			if (stderr) {
-				reject({type: 'stderr', error: stderr})
-				return
-			}
-			
-			resolve({data: stdout})
-		})
-	})
-}
-
-function getFiles(inputDir, filterExtension) {
+/**
+* Get a list of files with a specific extension within a folder.
+* Note: the file names include the extension in them.
+*/
+function getFileNames(inputDir, filterExtension) {
 	const items = fs.readdirSync(inputDir)
-	const boundedEq = funcRetEq(getExtension, filterExtension)
-	return items.filter(boundedEq)
+	const hasSpecifiedExtensionFn = funcRetEq(getExtension, filterExtension)
+	return items.filter(hasSpecifiedExtensionFn)
 }
 
+/**
+* creates a function that compares the result of the the value called within the returned function to a 
+* value set during creation of the function.
+*/
 function funcRetEq(func, filterExt) {
 	return function(x) {
 		return func(x) == filterExt
 	}
 }
 
+/**
+* Gets the extension of a file path
+*/
 function getExtension(inputFile) {
 	const dotIndex = inputFile.lastIndexOf('.')
 	if(dotIndex == -1) {
@@ -214,6 +317,10 @@ function getExtension(inputFile) {
 	}
 }
 
+
+/**
+* Removes the extension from a file name
+*/
 function removeExtension(inputFile) {
 	const dotIndex = inputFile.lastIndexOf('.')
 	if(dotIndex == -1) {
@@ -221,4 +328,21 @@ function removeExtension(inputFile) {
 	} else {
 		return inputFile.slice(0, dotIndex)
 	}
+}
+
+/**
+* Normalize a folder
+*/
+function normalizeFolder(dirPath) {
+	dirPath = path.resolve(dirPath)
+	dirPath = dirPath.replace(/\\/g, '/')
+	dirPath.charAt(dirPath.lastChar)
+	if(dirPath.charAt(dirPath.length - 1) != '/') {
+		dirPath = dirPath + '/'
+	}
+	return path.normalize(dirPath)
+}
+
+function pathExists(path) {
+	return fs.existsSync(path)
 }
