@@ -38,7 +38,7 @@ const cc = {
 
 // Set vars from the config
 const inputDir = normalizeFolder(config.inputDir)
-const outputWadDir = normalizeFolder(config.outpatWadDir)
+const outputWadDir = normalizeFolder(config.outputWadDir)
 const png2mipCommand = config.png2mipCommand
 const buildWadCommand = config.buildWadCommand
 const imgtoolLog = config.imgtoolLog
@@ -53,8 +53,14 @@ if(!pathExists(toolPath)) {
 	process.exit(1)
 }
 
+// check if the inputdir exists, else create it
 if(!pathExists(inputDir)) {
-	fs.mkdirSync(inputDir)
+	fs.mkdirSync(inputDir, {recursive: true})
+}
+
+// check if the outputdir exists, else create it
+if(!pathExists(outputWadDir)) {
+	fs.mkdirSync(outputWadDir, {recursive: true})
 }
 
 // Actually do work
@@ -101,8 +107,8 @@ function pngs2mipsAndBuildWad(folderName, pngEditDateItems) {
 	const mipFolder = normalizeFolder(folderPath + 'mip')
 	
 	// 1. create the mip folder if it doesn't exist
-	if (!pathExists(mipFolder)){
-	    fs.mkdirSync(mipFolder)
+	if (!pathExists(mipFolder)) {
+	    fs.mkdirSync(mipFolder, {recursive: true})
 	}
 	
 	// 2. compare the data of the mip files and the pngs, to determine which ones need to get built.
