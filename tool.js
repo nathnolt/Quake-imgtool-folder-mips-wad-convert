@@ -37,6 +37,7 @@ const cc = {
 
 
 // Set vars from the config
+const thisPath = normalizeFolder('')
 const inputDir = normalizeFolder(config.inputDir)
 const outputWadDir = normalizeFolder(config.outputWadDir)
 const png2mipCommand = config.png2mipCommand
@@ -45,7 +46,6 @@ const imgtoolLog = config.imgtoolLog
 const pedanticLog = config.pedanticLog
 const toolPath = path.normalize(config.toolPath)
 const indentStr1 = '            '
-
 
 // Check if the imgtool exists
 if(!pathExists(toolPath)) {
@@ -106,6 +106,9 @@ function pngs2mipsAndBuildWad(folderName, pngEditDateItems) {
 	const folderPath = normalizeFolder(inputDir + folderName)
 	const mipFolder = normalizeFolder(folderPath + 'mip')
 	
+	const logFolderPath = getLogPath(thisPath, folderPath)
+	const logMipFolderPath = getLogPath(thisPath, mipFolder)
+	
 	// 1. create the mip folder if it doesn't exist
 	if (!pathExists(mipFolder)) {
 	    fs.mkdirSync(mipFolder, {recursive: true})
@@ -130,13 +133,13 @@ function pngs2mipsAndBuildWad(folderName, pngEditDateItems) {
 		const png2mipConvertShellCommand = png2mipCommand(toolPath, (folderPath + pngItem.fileName))
 		const result = executeShellScript(png2mipConvertShellCommand)
 		if(!result.success) {
-			console.error(cc.bgred, 'imgtool ERROR', cc.r, 'Converting png to mip:', (folderPath + pngItem.fileName), result.error)
+			console.error(cc.bgred, 'imgtool ERROR', cc.r, 'Converting png to mip:', (logFolderPath + pngItem.fileName), result.error)
 			continue
 		}
 		
 		const mipFileName = removeExtension(pngItem.fileName) + '.mip'
 		mipFileNames2Move.push(mipFileName)
-		if(pedanticLog) { console.log(`  ${folderPath + pngItem.fileName} -> ${folderPath + mipFileName}`) }
+		if(pedanticLog) { console.log(`  ${logFolderPath + pngItem.fileName} -> ${logFolderPath + mipFileName}`) }
 		if(imgtoolLog) { console.log(' ', cc.bgcyan + ' imgtool ' + cc.r, afterFirstLineIndentLog(indentStr1, result.msg)) }
 	}
 	
@@ -147,7 +150,7 @@ function pngs2mipsAndBuildWad(folderName, pngEditDateItems) {
 		const oldMipPath = folderPath + mipFileName
 		const newMipPath = mipFolder + mipFileName
 		fs.renameSync(oldMipPath, newMipPath)
-		if(pedanticLog) { console.log(`  ${oldMipPath} -> ${newMipPath}`) }
+		if(pedanticLog) { console.log(`  ${logFolderPath + mipFileName} -> ${logMipFolderPath + mipFileName}`) }
 	}
 	
 	// 5. build the wad file
@@ -342,11 +345,19 @@ function removeExtension(inputFile) {
 function normalizeFolder(dirPath) {
 	dirPath = path.resolve(dirPath)
 	dirPath = dirPath.replace(/\\/g, '/')
-	dirPath.charAt(dirPath.lastChar)
 	if(dirPath.charAt(dirPath.length - 1) != '/') {
 		dirPath = dirPath + '/'
 	}
 	return path.normalize(dirPath)
+}
+
+function getLogPath(thisPath, folderPath) {
+	let relPath = path.relative(thisPath, folderPath)
+	relPath = relPath.replace(/\\/g, '/')
+	if(relPath.charAt(relPath.length - 1) != '/') {
+		relPath = relPath + '/'
+	}
+	return path.normalize(relPath)
 }
 
 function pathExists(path) {
