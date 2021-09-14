@@ -64,7 +64,7 @@ if(!pathExists(outputWadDir)) {
 }
 
 // Actually do work
-const folders = getFolderNames(inputDir)
+const folders = getFolderNames(inputDir).filter(filterFolderNames)
 if(folders.length == 0) {
 	console.error(cc.bgred, 'ERROR', cc.r, 'could not find any folders in ', inputDir)
 	process.exit(1)
@@ -216,6 +216,12 @@ function findMip(name, mipEditDateItems) {
 	return false
 }
 
+function filterFolderNames(folderName) {
+	if(folderName.indexOf('.git') != -1) {
+		return false
+	}
+	return true
+}
 
 
 // More generic helper functions
