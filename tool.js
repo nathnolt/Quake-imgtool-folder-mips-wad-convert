@@ -1,6 +1,7 @@
 // 
 // This script is a little helper program to make using the fte imgtool a little bit more convenient.
 // 
+//
 // fte imgtool: https://fte.triptohell.info/moodles/win64/
 // 
 // Usage: 
@@ -17,9 +18,6 @@
 //   
 //   Supported img formats (only png, tga, jpg, jpeg and bmp tested): ['png', 'tga', 'jpg', 'jpeg', 'bmp', 'dds', 'ktx', 'ico', 'psd', 'pfm', 'pbm', 'pgm', 'ppm', 'hdr', 'astc', 'pkm', 'pcx']
 //
-// TODO
-//   This tool (buildWadCommand) doesn't respect the mip names, instead it takes stuff before it as well, which I don't like. But maybe it works if you use / instead of \
-//   figure out in which cases the mip names are retained.
 
 
 // 0. initial stuff
