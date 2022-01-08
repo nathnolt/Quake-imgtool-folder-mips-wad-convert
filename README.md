@@ -39,4 +39,4 @@ The goal of this tool is to make working with textures a breeze, rather than a p
 
 # Todo
 
-Add support for dithering ( https://github.com/makeworld-the-better-one/didder/releases ) and no fullbright pixels
+Add support for dithering probably using: ( https://github.com/makeworld-the-better-one/didder/releases ) and no fullbright pixels
