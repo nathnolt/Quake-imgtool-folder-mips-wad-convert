@@ -16,8 +16,16 @@
 //   but you get no configuration for this, You want to prepare the img files 
 //   with something like Gimp, to convert it into a non fullbright quake palette friendly img.
 //   
-//   Supported img formats (only png, tga, jpg, jpeg and bmp tested): ['png', 'tga', 'jpg', 'jpeg', 'bmp', 'dds', 'ktx', 'ico', 'psd', 'pfm', 'pbm', 'pgm', 'ppm', 'hdr', 'astc', 'pkm', 'pcx']
+//   Supported img formats (only png, tga, jpg, jpeg and bmp tested): [
+//     'png', 'tga', 'jpg', 'jpeg', 'bmp', 'dds', 'ktx', 'ico', 
+//     'psd', 'pfm', 'pbm', 'pgm', 'ppm', 'hdr', 'astc', 'pkm', 'pcx'
+//   ]
 //
+// 
+// TODO
+//   - Add support for dithering ( https://github.com/makeworld-the-better-one/didder/releases ) and no fullbright pixels
+//   
+
 
 
 // 0. initial stuff
@@ -42,7 +50,7 @@ const cc = {
 // Set vars from the config
 const thisPath = normalizeFolder('')
 const inputDir = normalizeFolder(config.inputDir)
-const pngOutputWadDir = normalizeFolder(config.pngOutputWadDir)
+const pngOutputDir = normalizeFolder(config.pngOutputDir)
 const outputWadDir = normalizeFolder(config.outputWadDir)
 const img2mipCommand = config.img2mipCommand
 const buildWadCommand = config.buildWadCommand
@@ -52,6 +60,25 @@ const pedanticLog = config.pedanticLog
 const toolPath = path.normalize(config.toolPath)
 const indentStr1 = '            '
 const devDebug = true
+const supportedImageTypes = [
+	'png',
+	'tga',
+	'jpg',
+	'jpeg',
+	'bmp',
+	'dds',
+	'ktx',
+	'ico',
+	'psd',
+	'pfm',
+	'pbm',
+	'pgm',
+	'ppm',
+	'hdr',
+	'astc',
+	'pkm',
+	'pcx'
+]
 
 // Check if the imgtool exists
 if(!pathExists(toolPath)) {
@@ -61,7 +88,7 @@ if(!pathExists(toolPath)) {
 
 ensureFolder(inputDir)
 ensureFolder(outputWadDir)
-ensureFolder(pngOutputWadDir)
+ensureFolder(pngOutputDir)
 
 
 // check command line arguments
@@ -110,14 +137,27 @@ function helpRoute() {
 	const helpLines = [
 		cc.bgblue + 'Usage:' + cc.r,
 		'  node tool.js "command", where "command" is something like -d or -r',
+		'',
 		'  ' + cc.bgcyan + 'Example:' + cc.r,
 		'    node tool.js -d',
 		'',
 		cc.bgblue + 'Commands:' + cc.r,
-		'  -d [or] --default: The default command, converts folders of imgs into mips and into wads',
-		'  -r [or] --reverse The reverse command, converts wads back into folders with png files',
-		'  -f [or] --force after another command to forcefully recreate things regardless of the modification dates',
-		'  "" [or] -h [or] --help This help message',
+		'  -d, --default:',
+		'',
+		'    The default command, converts folders of imgs into mips and into wads',
+		'',
+		'  -r, --reverse:',
+		'',
+		'    The reverse command, converts wads back into folders with png files.',
+		'    This only works for the wads directly in the outputWadDir, wads in subdirectories are not handled',
+		'',
+		'  -f, --force: ',
+		'',
+		'    After another command to forcefully recreate things regardless of the modification dates',
+		'',
+		'  "", -h, --help:',
+		'',
+		'    This help message',
 	]
 	console.log(helpLines.join('\n'))
 }
@@ -136,7 +176,7 @@ function reverseRoute() {
 	for(let i=0; i < wads.length; i++) {
 		// 3. get the wadName and folders
 		const wadName = removeExtension(wads[i])
-		const pngFolder = normalizeFolder(pngOutputWadDir + wadName)
+		const pngFolder = normalizeFolder(pngOutputDir + wadName)
 		const logPngFolder = getLogPath(thisPath, pngFolder)
 		
 		// 4. ensure the png path exists
@@ -195,22 +235,24 @@ function defaultRoute() {
 }
 
 /**
-* this function checks if the wad has to be built at all.
+* This function checks if the wad has to be built at all, 
+* and then does it.
 */
 function doFolder(folderName) {
 	const folderPath = normalizeFolder(inputDir + folderName)
-	const images = getFileNames(folderPath, ['png', 'tga', 'jpg', 'jpeg', 'bmp', 'dds', 'ktx', 'ico', 'psd', 'pfm', 'pbm', 'pgm', 'ppm', 'hdr', 'astc', 'pkm', 'pcx'])
+	const wadConfig = getWadConfig(folderPath)
+	const images = getFileNames(folderPath, supportedImageTypes)
 	if(images.length == 0) {
 		console.error(cc.bgred, 'ERROR', cc.r, 'No valid image files found.')
 	}
 	const imgEditDateItems = getEditDates(folderPath, images)
-	const wadExists = pathExists(outputWadDir + folderName + '.wad')
+	const wadExists = pathExists(wadConfig.outputWadDir + folderName + '.wad')
 	
 	let wadHasToBeBuilt = false
-	if(wadExists && !forceRecreateFlag) {
+	if(wadExists && !forceRecreateFlag && !wadConfig.forceRebuilt) {
 		// compare the edit dates of the imgs and the wad, to check if we need to rebuild the wad
 		const lastImgEditDate = getLastEditDate(imgEditDateItems)
-		const wadEditDateItems = getEditDates(outputWadDir, [folderName + '.wad'])
+		const wadEditDateItems = getEditDates(wadConfig.outputWadDir, [folderName + '.wad'])
 		const lastWadEditDate = getLastEditDate(wadEditDateItems)
 		wadHasToBeBuilt = lastImgEditDate > lastWadEditDate
 	} else {
@@ -219,16 +261,50 @@ function doFolder(folderName) {
 	
 	if(wadHasToBeBuilt) {
 		console.log('Building', cc.bgblue, (folderName + '.wad'), cc.r )
-		imgs2mipsAndBuildWad(folderName, imgEditDateItems)
+		imgs2mipsAndBuildWad(folderName, wadConfig, imgEditDateItems)
 	} else {
 		console.log(cc.bggrey, (folderName + '.wad'), cc.r, 'up 2 date.')
 	}
 }
 
 /**
+* We need to get the wad config, which is a combination
+* of the defaultWadConfig and an optional wadconfig file within the folderPath
+*/
+function getWadConfig(folderPath) {
+	
+	// 1. get the default wadConfig.
+	let defaultWadConfig = {}
+	if(config.defaultWadConfig) {
+		defaultWadConfig = Object.assign(defaultWadConfig, config.defaultWadConfig)
+	}
+	const wadConfig = defaultWadConfig
+	
+	// 2. see if there is a wadConfig file inside of the folderPath, and require it.
+	let overwriteWadConfig
+	if(pathExists(folderPath + 'wadconfig.js')) {
+		overwriteWadConfig = require(folderPath + 'wadconfig.js')
+	}
+	if(overwriteWadConfig) {
+		Object.assign(wadConfig, overwriteWadConfig)
+	}
+	
+	// Add an outputWadDir property, which has the absolute value.
+	if(wadConfig.relativeOutputWadDir) {
+		wadConfig.outputWadDir = normalizeFolder(outputWadDir + wadConfig.relativeOutputWadDir)
+		ensureFolder(wadConfig.outputWadDir)
+	} else {
+		wadConfig.outputWadDir = outputWadDir
+	}
+	
+	// console.log(wadConfig)
+	return wadConfig
+}
+
+/**
 * 2. convert the imgs into mips and build the wad
 */
-function imgs2mipsAndBuildWad(folderName, imgEditDateItems) {
+function imgs2mipsAndBuildWad(folderName, wadConfig, imgEditDateItems) {
 	const folderPath = normalizeFolder(inputDir + folderName)
 	const mipFolder = normalizeFolder(folderPath + 'mip')
 	
@@ -282,11 +358,11 @@ function imgs2mipsAndBuildWad(folderName, imgEditDateItems) {
 	}
 	
 	// 5. build the wad file
-	const wadBuildShellCommand = buildWadCommand(toolPath, getLogPath(thisPath, outputWadDir), folderName, getLogPath(thisPath, mipFolder))
+	const wadBuildShellCommand = buildWadCommand(toolPath, getLogPath(thisPath, wadConfig.outputWadDir), folderName, getLogPath(thisPath, mipFolder))
 	if(devDebug) { console.log(`wad build shell command: ${wadBuildShellCommand}`)}
 	const result = executeShellScript(wadBuildShellCommand, {cwd: thisPath})
 	if(!result.success) {
-		console.error(cc.bgred, 'imgtool ERROR', cc.r, 'Building wad:', (outputWadDir + folderName + '.wad'), result.error)
+		console.error(cc.bgred, 'imgtool ERROR', cc.r, 'Building wad:', (wadConfig.outputWadDir + folderName + '.wad'), result.error)
 		return
 	}
 	
