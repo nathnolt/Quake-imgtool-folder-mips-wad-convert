@@ -21,9 +21,27 @@ module.exports = {
 	outputWadDir: 'C:/games/quake1/wads',
 	
 	// The output folder of the reverse method.
-	pngOutputWadDir: 'wad-exports',
+	pngOutputDir: 'wad-exports',
 	
 	toolPath: 'imgtool64.exe',
+	
+	defaultWadConfig: {
+		// NOT YET SUPPORTED:
+		// fullbrights: true,
+		
+		// dither algorithms
+		// - none
+		// - Atkinson
+		// - Atkinson
+		// - Atkinson
+		// - Atkinson
+		// see diddler...
+		// ditherAlgorithm: 'Atkinson',
+	},
+	
+	pedanticLog: true,
+	imgtoolLog: false,
+	
 	
 	// The command that is used to convert the imgs into mips
 	img2mipCommand(relativeToolPathFromImgFolder, imgName) {
@@ -39,7 +57,4 @@ module.exports = {
 	wad2pngsCommand(toolPath, outputWadDir, wadName) {
 		return `${toolPath} -x --ext png ${outputWadDir}${wadName}.wad`
 	},
-	
-	pedanticLog: true,
-	imgtoolLog: false,
 }
