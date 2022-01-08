@@ -12,7 +12,7 @@ The goal of this tool is to make working with textures a breeze, rather than a p
 
 
 # Usage
-1. Add a folder inside the input folder containing image files. The name of the folder will be name of the output wad. (so for example: <root>/input/mywad/texture[1-100].png will become mywad.wad with all the 100 textures.)
+1. Add a folder inside the input folder containing image files. The name of the folder will be name of the output wad. (so for example: &lt;root&gt;/input/mywad/texture[1-100].png will become mywad.wad with all the 100 textures.)
 2. open a console
 3. type: `node tool.js -d` and press enter
 4. the wad files should get built . Every time you edit the images you have to execute the command again. Only the updated wads will get built.
