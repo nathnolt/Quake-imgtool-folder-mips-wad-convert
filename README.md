@@ -36,3 +36,7 @@ The goal of this tool is to make working with textures a breeze, rather than a p
 - Added support for the -r (reverse) command
 - Added support for the -f (force) command
 - Added basic wad config support with relativeOutputWadDir and forceRebuilt support
+
+# Todo
+
+Add support for dithering ( https://github.com/makeworld-the-better-one/didder/releases ) and no fullbright pixels
