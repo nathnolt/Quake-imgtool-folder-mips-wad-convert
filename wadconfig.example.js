@@ -1,4 +1,6 @@
 // These are the custom overwrite settings for this wad.
+// this file will be put next to the image files, in order to specify 
+// config options for this specific wad.
 module.exports = {
 	relativeOutputWadDir: './subfolder/',
 	// forceRebuilt: true,
