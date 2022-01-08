@@ -3,16 +3,20 @@ A small NodeJS helper program to make the UX of making wads way better. uses the
 
 The goal of this tool is to make working with textures a breeze, rather than a pain.
 
+
 # Preparation
 1. Download all the files
 2. Make sure you have Node.js installed ( https://nodejs.org/en/ ) and configured so you can type node in the command line and it works.
 3. edit the 'outputWadDir' in config.js to have the correct output path.
+4. create an input folder.
+
 
 # Usage
-1. Add folders to this folder containing image files.
+1. Add a folder inside the input folder containing image files. The name of the folder will be name of the output wad.
 2. open a console
 3. type: `node tool.js -d` and press enter
-4. the wad files should get built and every time you edit or add a image file you can just relaunch the command and it will only build the changed wad files.
+4. the wad files should get built . Every time you edit the images you have to execute the command again. Only the updated wads will get built.
+
 
 ## Usage Options
 - `node tool.js` for help
@@ -24,6 +28,7 @@ The goal of this tool is to make working with textures a breeze, rather than a p
 # Info about usage
 - The name of the folders will be the names of the wads and the names of the image files will be the names of the textures within the wad
 - If the image files aren't in the Quake pallete already they will be converted, but you will get a better result converting them manually using a tool like GIMP ( https://www.gimp.org/ )
+
 
 # Updates
 
