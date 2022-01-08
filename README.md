@@ -35,3 +35,4 @@ The goal of this tool is to make working with textures a breeze, rather than a p
 - Fixed a bug where the texture names were incorrect
 - Added support for the -r (reverse) command
 - Added support for the -f (force) command
+- Added basic wad config support with relativeOutputWadDir and forceRebuilt support
