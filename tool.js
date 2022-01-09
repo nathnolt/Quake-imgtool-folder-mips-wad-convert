@@ -103,6 +103,7 @@ const commands = {
 const cmdArgs = process.argv.slice(2)
 
 let forceRecreateFlag = false
+let forceSingleName
 if(cmdArgs.length == 0) {
 	helpRoute()
 } else {
@@ -110,9 +111,13 @@ if(cmdArgs.length == 0) {
 	
 	if(cmdArgs.length >= 2) {
 		const secondArg = cmdArgs[1].toLowerCase()
-		if(secondArg == '-f' || secondArg == '--force') {
+		if(secondArg == '-fa' || secondArg == '--forceall') {
 			forceRecreateFlag = true
 			console.log('Force recreate.')
+		} else {
+			// assume name, and just force that one.
+			forceSingleName = cmdArgs[1]
+			forceRecreateFlag = true
 		}
 	}
 	
@@ -138,8 +143,11 @@ function helpRoute() {
 		cc.bgblue + 'Usage:' + cc.r,
 		'  node tool.js "command", where "command" is something like -d or -r',
 		'',
-		'  ' + cc.bgcyan + 'Example:' + cc.r,
+		'  ' + cc.bgcyan + 'example:' + cc.r,
 		'    node tool.js -d',
+		'',
+		'  ' + cc.bgcyan + 'example2:' + cc.r + ' force recreate just 1:',
+		'    node tool.js -d wadfolder',
 		'',
 		cc.bgblue + 'Commands:' + cc.r,
 		'  -d, --default:',
@@ -151,9 +159,9 @@ function helpRoute() {
 		'    The reverse command, converts wads back into folders with png files.',
 		'    This only works for the wads directly in the outputWadDir, wads in subdirectories are not handled',
 		'',
-		'  -f, --force: ',
+		'  -fa, --forceall: ',
 		'',
-		'    After another command to forcefully recreate things regardless of the modification dates',
+		'    After another command to forcefully recreate everything regardless of the modification dates',
 		'',
 		'  "", -h, --help:',
 		'',
@@ -226,12 +234,33 @@ function reverseRoute() {
 
 
 function defaultRoute() {
-	const folders = getFolderNames(inputDir).filter(filterFolderNames)
-	if(folders.length == 0) {
-		console.error(cc.bgred, 'ERROR', cc.r, 'could not find any folders in ', inputDir)
-		process.exit(1)
+	if(forceSingleName) {
+		const normalizedPath = normalizeFolder(inputDir + forceSingleName)
+		
+		// Check if it exists
+		if(!pathExists(normalizedPath)) {
+			console.error(cc.bgred, 'ERROR', cc.r, 'item does not exist:', forceSingleName)
+			process.exit(1)
+		}
+		
+		// Extract the dirname from normalizedPath
+		let normalized
+		{
+			const pathArr = normalizedPath.split(/\\|\//)
+			normalized = pathArr.slice(-2, -1)[0]
+		}
+		console.log('recreate only', normalized)
+		doFolder(normalized)
+	} else {
+		
+		// The default case.
+		const folders = getFolderNames(inputDir).filter(filterFolderNames)
+		if(folders.length == 0) {
+			console.error(cc.bgred, 'ERROR', cc.r, 'could not find any folders in ', inputDir)
+			process.exit(1)
+		}
+		folders.forEach(doFolder)
 	}
-	folders.forEach(doFolder)
 }
 
 /**
