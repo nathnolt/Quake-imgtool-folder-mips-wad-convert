@@ -24,11 +24,11 @@ module.exports = {
 	pngOutputDir: 'wad-exports',
 	
 	toolPath: 'imgtool64.exe',
-	diddlerToolPath: 'didder_1.1.0.exe',
+	didderToolPath: 'didder_1.1.0.exe',
 	
 	defaultWadConfig: {
 		// NOT YET SUPPORTED:
-		// fullbrights: true,
+		removeFullbrightsFromAllwads: false,
 		
 		// dither algorithms
 		// - none
@@ -37,7 +37,7 @@ module.exports = {
 		// - Atkinson
 		// - Atkinson
 		// see diddler...
-		// ditherAlgorithm: 'Atkinson',
+		// defaultDitherAlgorithm: 'Atkinson',
 	},
 	
 	pedanticLog: true,

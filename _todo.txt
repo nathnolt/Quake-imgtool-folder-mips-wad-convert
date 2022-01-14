@@ -1,0 +1,6 @@
+- Dithering
+  Look into
+    https://github.com/makeworld-the-better-one/didder/releases
+    
+    To add dithering support, and have a standard dither algo to apply to any image that isn't already in the quake palette.
+    and create a way to quickly work with files to add dithering.

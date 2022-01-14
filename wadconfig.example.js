@@ -2,15 +2,15 @@
 // this file will be put next to the image files, in order to specify 
 // config options for this specific wad.
 module.exports = {
-	relativeOutputWadDir: './subfolder/',
+	// relativeOutputWadDir: './subfolder/',
 	// forceRebuilt: true,
 	
 	// NOT YET SUPPORTED:
 	/*
 	Full bright
 	*/
+	// removeFullbrights: true,
 	
-	// fullbrights: true,
 	/* add this for exeptions when fullbrights is false */
 	// fullbrightTextures: [
 	// 	'texture1',
@@ -24,9 +24,13 @@ module.exports = {
 	// ],
 	
 	
+	// NOT YET SUPPORTED:
 	/*
 	Dither
 	*/
 	// ditherAlgorithm: 'Atkinson',
-	// ditherTextures: {},
+	// algorithms: {
+	//   'bayer 4x4': ['texture1'], // perform no dither algorithm on texture1.
+	// if it has to be color converted.
+	//},
 }
