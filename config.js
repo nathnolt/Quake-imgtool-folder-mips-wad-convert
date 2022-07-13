@@ -16,9 +16,25 @@
 // 
 // The 'imgtoolLog' shows the output of the imgtool64.exe
 // 
+
+
+
+// if edmAlgoSerp is true, it will go left->right, 
+// right->left alternation every row.
+// if false, it will go left-> every row.
+// this only applies to edm (error diffusion matrix) dithering algorithms.
+var edmAlgoSerp = false
+if(edmAlgoSerp == true) {
+	edmAlgoSerp = '-s '
+} else {
+	edmAlgoSerp = ''
+}
+
+
 module.exports = {
 	inputDir: 'input',
-	outputWadDir: 'C:/games/quake1/wads',
+	// outputWadDir: 'C:/games/quake1/wads',
+	outputWadDir: 'output',
 	
 	// The output folder of the reverse method.
 	pngOutputDir: 'wad-exports',
@@ -26,23 +42,163 @@ module.exports = {
 	toolPath: 'imgtool64.exe',
 	didderToolPath: 'didder_1.1.0.exe',
 	
+	// This is the global config for all of the WADS.
+	// this object is the same as the module.exports on a wadconfig.js
 	defaultWadConfig: {
-		// NOT YET SUPPORTED:
-		removeFullbrightsFromAllwads: false,
+		// if set to true, none of next settings regarding fullbright / dithering stuff is supported, but it saves on disk space.
+		// basically, you can set it to true if you don't want any translation of the images, either for everything or each wad seperately.
+		skipDithering_nofullbright: false,
 		
-		// dither algorithms
-		// - none
-		// - Atkinson
-		// - Atkinson
-		// - Atkinson
-		// - Atkinson
-		// see diddler...
-		// defaultDitherAlgorithm: 'Atkinson',
+		// removes the fullbright pixels from the palette, so kinda does the same thing as removeFullbright, 
+		// except it will dither the fullbright pixels.
+		removeFullbrightPixels: false, // it's false by default because we do want fullbrights in certain textures. and it can be turned off/on for specific textures
+		//removeFullbrightPixels: true,
+		
+		//-----------------------------
+		//
+		// Dithering settings
+		//
+		//-----------------------------
+		// 
+		// So, there are 2 types of dithering, either those which work with patterns (random, bayer, ordered (odm)), or error diffusion (edm).
+		// patterned dithering looks pretty good for certain types of images, but it has a major flaw: it will dither 
+		// pixels which are already in the pattern. So if you would execute ordered dithering on regular quake textures which are already in the
+		// pattern, it will still translate them.
+		// 
+		// error diffusion doesn't have this problem, which is why it's set to one of these by default.
+		// never the less, here are a bunch of algorithm possibilities.
+		// 
+		// For more detail, look at the following resources
+		//   - https://github.com/makeworld-the-better-one/didder/blob/main/MANPAGE.md#commands
+		//   - https://pkg.go.dev/github.com/makeworld-the-better-one/dither/v2#OrderedDitherMatrix
+		// 
+		
+		
+		// error diffusion Matrix presets
+		//--------------------------------
+		// These are the best because they work with errors, meaning that images
+		// which are already in the pallette won't change at all.
+		//--------------------------------
+		algorithm: `edm ${edmAlgoSerp}FloydSteinberg`, // the default
+		//algorithm: `edm ${edmAlgoSerp}Simple2D`,
+		//algorithm: `edm ${edmAlgoSerp}FalseFloydSteinberg`,
+		//algorithm: `edm ${edmAlgoSerp}Stucki`,
+		//algorithm: `edm ${edmAlgoSerp}Burkes`,
+		//algorithm: `edm ${edmAlgoSerp}Sierra`,
+		//algorithm: `edm ${edmAlgoSerp}TwoRowSierra`,
+		//algorithm: `edm ${edmAlgoSerp}SierraLite`,
+		//algorithm: `edm ${edmAlgoSerp}StevenPigeon`,
+		
+		
+
+		
+		// Bayer matrix ordered dithering.
+		// these ones are okay for certain type of images
+		//-------------------------
+		//algorithm: 'bayer 2x2',
+		//algorithm: 'bayer 4x4',
+		//algorithm: 'bayer 3x3',
+		//algorithm: 'bayer 3x5',
+		//algorithm: 'bayer 5x3',
+		//algorithm: 'bayer 8x8',
+		//algorithm: 'bayer 16x16',
+		
+		
+		// Ordered Dithering Matrix presets
+		// most of these are just interesting effects
+		//-------------------------
+		//algorithm: 'odm ClusteredDot4x4',
+		//algorithm: 'odm ClusteredDotDiagonal8x8',
+		//algorithm: 'odm Vertical5x3',
+		//algorithm: 'odm Horizontal3x5',
+		//algorithm: 'odm ClusteredDotDiagonal6x6',
+		//algorithm: 'odm ClusteredDotDiagonal8x8_2',
+		//algorithm: 'odm ClusteredDotDiagonal16x16',
+		//algorithm: 'odm ClusteredDot6x6',
+		//algorithm: 'odm ClusteredDotSpiral5x5',
+		//algorithm: 'odm ClusteredDotHorizontalLine',
+		//algorithm: 'odm ClusteredDotVerticalLine',
+		//algorithm: 'odm ClusteredDot8x8',
+		//algorithm: 'odm ClusteredDot6x6_2',
+		//algorithm: 'odm ClusteredDot6x6_3',
+		//algorithm: 'odm ClusteredDotDiagonal8x8_3',
+		
+		// random dithering. Note, 
+		// this looks bad (probably having to do with the quake palette)
+		//-------------------------
+		//algorithm: 'random -0.1,0.1',
+		// algorithm: 'random -0.2,0.2',
+		//algorithm: 'random -0.5,0.5',
+		//algorithm: 'random -0.7,0.7',
+		
+		// customPalette:
+		// change the palette that is used. cool for weird effects.
+		//------------------
+		// customPalette: '#000000 #444444 #888888 #ffffff', // hex syntax
+		// customPalette: '0,0,0 68,68,68 136,136,136 255,255,255', // rgb syntax
+		
+		// recolor:
+		// recolor the image after the dithering process, where each nth color 
+		// in the palette is swapped by the nth color in the recolor param
+		//-------------------------------------------------
+		// recolor: '#ffffff #ff00ff #00ff00 #000000',
+		
+		// strength: the strength of the dithering. 
+		// normal range = -1 to 1, other values produce interesting results (-10 for exmple)
+		//strength: 1,
+		//strength: 0.64,
+		//strength: 0.1,
+		
+		
+		//------------------------------
+		//
+		// Image modification settings
+		//
+		//------------------------------
+		
+		// change the image to greyscale if true
+		// grayscale: false,
+		
+		// saturation: change the saturation before dithering
+		// range: -1 to 1   -1 = greyscale   0 = normal   1 = extra saturated
+		//saturation: 0, // colors will be regular
+		//saturation: -0.5, // textures will have less color
+		//saturation: 0.5, // colors will be more vibrant
+		
+		// brightness: change the brightness before dithering
+		// range -1 to 1    -1 = black    0 = normal    1 = white
+		//brightness: 0,
+		//brightness: -0.1, // textures are darker
+		//brightness: 0.1, // textures are lighter
+		
+		// contrast: change the contrast before dithering
+		// range -1 to 1   -1 = grey   0 = normal    1 = brightest colors only
+		//contrast: 0,
+		//contrast: -0.2, // images will be a bit duller
+		//contrast: 0.2, // images look a bit more vibrant
+		
+		
+		//-------------------
+		// 
+		// Resize settings. if only 1 param is given, it will maintain aspect ratio
+		// 
+		//-------------------
+		//width: 128,
+		//height: 128,
+		
+		// upscale after dithering
+		//upscale: 1, // no upscale
+		// upscale: 2, // 2 times the upscale (pixels will be more blocky)
 	},
 	
+	// logs some things.
 	pedanticLog: true,
+	// logs some other things
 	imgtoolLog: false,
-	
+	// logs the executed commands
+	commandLog: false,
+	// some other logs
+	devLog: false,
 	
 	// The command that is used to convert the imgs into mips
 	img2mipCommand(relativeToolPathFromImgFolder, imgName) {
@@ -63,14 +219,14 @@ module.exports = {
 	// In this example, the image1.tga is convert into a png variant. We have to do this step before we execute diddler,
 	// for every format which diddler does not support.
 	// I suppose we have a convertion array with every extension that needs to be converted, where they will all be converted into a png.
-	convertFormat(toolPath, inputName) {
-		return `.\imgtool64.exe -c --ext png .\image1.tga`
+	img2pngCommand(relativeToolPath, imgName) {
+		return `${relativeToolPath} -c --ext png ${imgName}`
 	},
 	
-	diddlerConvert(toolPath, outputDir, inputName, palette, algorithm) {
-		// Todo: make this work.
-		return ".\didder_1.1.0.exe -i .\img1.png -o output.png -p '0,0,0 255,0,255' bayer 4x4"
-		// .\didder_1.1.0.exe -i .\image.jpeg -o output.png -p '0,0,0 15,15,15 31,31,31 47,47,47 63,63,63 75,75,75 91,91,91 107,107,107 123,123,123 139,139,139 155,155,155 171,171,171 187,187,187 203,203,203 219,219,219 235,235,235 15,11,7 23,15,11 31,23,11 39,27,15 47,35,19 55,43,23 63,47,23 75,55,27 83,59,27 91,67,31 99,75,31 107,83,31 115,87,31 123,95,35 131,103,35 143,111,35 11,11,15 19,19,27 27,27,39 39,39,51 47,47,63 55,55,75 63,63,87 71,71,103 79,79,115 91,91,127 99,99,139 107,107,151 115,115,163 123,123,175 131,131,187 139,139,203 0,0,0 7,7,0 11,11,0 19,19,0 27,27,0 35,35,0 43,43,7 47,47,7 55,55,7 63,63,7 71,71,7 75,75,11 83,83,11 91,91,11 99,99,11 107,107,15 7,0,0 15,0,0 23,0,0 31,0,0 39,0,0 47,0,0 55,0,0 63,0,0 71,0,0 79,0,0 87,0,0 95,0,0 103,0,0 111,0,0 119,0,0 127,0,0 19,19,0 27,27,0 35,35,0 47,43,0 55,47,0 67,55,0 75,59,7 87,67,7 95,71,7 107,75,11 119,83,15 131,87,19 139,91,19 151,95,27 163,99,31 175,103,35 35,19,7 47,23,11 59,31,15 75,35,19 87,43,23 99,47,31 115,55,35 127,59,43 143,67,51 159,79,51 175,99,47 191,119,47 207,143,43 223,171,39 239,203,31 255,243,27 11,7,0 27,19,0 43,35,15 55,43,19 71,51,27 83,55,35 99,63,43 111,71,51 127,83,63 139,95,71 155,107,83 167,123,95 183,135,107 195,147,123 211,163,139 227,179,151 171,139,163 159,127,151 147,115,135 139,103,123 127,91,111 119,83,99 107,75,87 95,63,75 87,55,67 75,47,55 67,39,47 55,31,35 43,23,27 35,19,19 23,11,11 15,7,7 187,115,159 175,107,143 163,95,131 151,87,119 139,79,107 127,75,95 115,67,83 107,59,75 95,51,63 83,43,55 71,35,43 59,31,35 47,23,27 35,19,19 23,11,11 15,7,7 219,195,187 203,179,167 191,163,155 175,151,139 163,135,123 151,123,111 135,111,95 123,99,83 107,87,71 95,75,59 83,63,51 67,51,39 55,43,31 39,31,23 27,19,15 15,11,7 111,131,123 103,123,111 95,115,103 87,107,95 79,99,87 71,91,79 63,83,71 55,75,63 47,67,55 43,59,47 35,51,39 31,43,31 23,35,23 15,27,19 11,19,11 7,11,7 255,243,27 239,223,23 219,203,19 203,183,15 187,167,15 171,151,11 155,131,7 139,115,7 123,99,7 107,83,0 91,71,0 75,55,0 59,43,0 43,31,0 27,15,0 11,7,0 0,0,255 11,11,239 19,19,223 27,27,207 35,35,191 43,43,175 47,47,159 47,47,143 47,47,127 47,47,111 47,47,95 43,43,79 35,35,63 27,27,47 19,19,31 11,11,15 43,0,0 59,0,0 75,7,0 95,7,0 111,15,0 127,23,7 147,31,7 163,39,11 183,51,15 195,75,27 207,99,43 219,127,59 227,151,79 231,171,95 239,191,119 247,211,139 167,123,59 183,155,55 199,195,55 231,227,87 127,191,255 171,231,255 215,255,255 103,0,0 139,0,0 179,0,0 215,0,0 255,0,0 255,243,147 255,247,199 255,255,255 159,91,83' edm Atkinson
+	// the command to convert the image to a dithered potentially color changed upscaled resized image
+	// uses didder ( https://github.com/makeworld-the-better-one/didder )
+	didderConvertCommand(relativeToolPath, imgNameWithExt, imgName, palette, algorithm, extraStr) {
+		return `${relativeToolPath} -i ${imgNameWithExt} -o dithered/${imgName}.png -p "${palette}" ${extraStr}${algorithm}`
 	}
 	
 }

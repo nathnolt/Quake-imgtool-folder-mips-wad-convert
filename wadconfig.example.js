@@ -1,36 +1,42 @@
 // These are the custom overwrite settings for this wad.
-// this file will be put next to the image files, in order to specify 
-// config options for this specific wad.
+// this file can be put in any folder within input, and it will effect all the folders below it, 
+// overwriting settings set in folders above it.
+// also: rename it to wadconfig.js for it to work.
 module.exports = {
-	// relativeOutputWadDir: './subfolder/',
-	// forceRebuilt: true,
+	// relativeOutputWadDir: './other-dir/',
+	forceRebuilt: true,
+	skipDithering_nofullbright: false,
 	
-	// NOT YET SUPPORTED:
-	/*
-	Full bright
-	*/
-	// removeFullbrights: true,
+	//
+	algorithm: 'edm Simple2D',
+	strength: 0.64,
+	contrast: 0.2, // images look a bit more vibrant
+	// upscale: 2, // 2 times the upscale (pixels will be more blocky)
+	customPalette: '#000000 #444444 #888888 #ffffff', // hex syntax
+	recolor: '#ffffff #ff00ff #00ff00 #000000',
 	
-	/* add this for exeptions when fullbrights is false */
-	// fullbrightTextures: [
-	// 	'texture1',
-	// 	'#slime3'
-	// ],
+	// change settings for specific textures
+	textureOpts: {
+		'yellow-square': {
+			skipDithering_nofullbright: false,
+			removeFullbrightPixels: false,
+			//algorithm: 'edm Simple2D'
+		},
+		'speccy': {
+			// skipDithering_nofullbright: false,
+			removeFullbrightPixels: false,
+			algorithm: 'bayer 8x8',
+			customPalette: '#ff0000 #00ff00 #0000ff',
+			recolor: '#00ff00 #0000ff #ff0000',
+		},
+		'cliff_red_1': {
+			// skipDithering_nofullbright: false,
+			removeFullbrightPixels: true,
+			//algorithm: 'bayer 8x8'
+			width: 128,
+			height: 128,
+		},
+	},
 	
-	/* add this for exeptions when fullbrights is true */
-	// noFullbrightTextures: [
-	// 	'texture1',
-	// 	'#slime3'
-	// ],
-	
-	
-	// NOT YET SUPPORTED:
-	/*
-	Dither
-	*/
-	// ditherAlgorithm: 'Atkinson',
-	// algorithms: {
-	//   'bayer 4x4': ['texture1'], // perform no dither algorithm on texture1.
-	// if it has to be color converted.
-	//},
+	// for the full list of settings, see config.js
 }
