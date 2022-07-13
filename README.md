@@ -27,16 +27,22 @@ The goal of this tool is to make working with textures a breeze, rather than a p
 
 # Info about usage
 - The name of the folders will be the names of the wads and the names of the image files will be the names of the textures within the wad
-- If the image files aren't in the Quake pallete already they will be converted, but you will get a better result converting them manually using a tool like GIMP ( https://www.gimp.org/ )
+- add a wadconfig.js to the folder, see wadconfig.example.js and config.js for what you can add.
 
 
 # Updates
 
+# v2
+- added support for didder, and a bunch of other things it supports (recolor, brightness, contrast, saturation upscale, resize)
+- send me a DM if there are any questions about how to use it
+
+
+## Old
 - Fixed a bug where the texture names were incorrect
 - Added support for the -r (reverse) command
 - Added support for the -f (force) command
 - Added basic wad config support with relativeOutputWadDir and forceRebuilt support
 
-# Todo
 
-Add support for dithering probably using: ( https://github.com/makeworld-the-better-one/didder/releases ) and no fullbright pixels
+# todo
+Probably make it so that it's clear on how to use it / what it even is. But then again, pretty lazy now to do it.
