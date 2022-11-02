@@ -90,6 +90,17 @@ module.exports = {
 		//algorithm: `edm ${edmAlgoSerp}StevenPigeon`,
 		
 		
+		//algorithm: `edm FloydSteinberg`, // the default
+		//algorithm: `edm Simple2D`,
+		//algorithm: `edm FalseFloydSteinberg`,
+		//algorithm: `edm Stucki`,
+		//algorithm: `edm Burkes`,
+		//algorithm: `edm Sierra`,
+		//algorithm: `edm TwoRowSierra`,
+		//algorithm: `edm SierraLite`,
+		//algorithm: `edm StevenPigeon`,
+		
+		
 
 		
 		// Bayer matrix ordered dithering.

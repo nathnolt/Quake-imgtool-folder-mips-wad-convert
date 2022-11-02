@@ -66,6 +66,14 @@ const toolPath = path.normalize(config.toolPath)
 const didderToolPath = path.normalize(config.didderToolPath)
 const indentStr1 = '            '
 
+// The list of allowed config names, in order of trying to find them. 
+// the first one found is the one that gets used for that folder.
+const allowedConfigNames = [
+	'!wadconfig.js',
+	'!config.js',
+	'wadconfig.js',
+	'config.js',
+]
 
 const skipFolderNames = [ // The folder names which are skipped
 	'.git', 'mip', 'dithered'
@@ -369,9 +377,15 @@ function getWadConfig(folderPath) {
 		// overwrite it.
 		{
 			let overwriteConfig
-			if(pathExists(handlePath + 'wadconfig.js')) {
-				overwriteConfig = require(handlePath + 'wadconfig.js')
+			
+			const configName = allowedConfigNames.find(function(configName) {
+				return pathExists(handlePath + configName)
+			})
+			
+			if(configName != undefined) {
+				overwriteConfig = require(handlePath + configName)
 			}
+			
 			if(overwriteConfig) {
 				ObjectAssignDeep(wadConfig, overwriteConfig)
 			}
