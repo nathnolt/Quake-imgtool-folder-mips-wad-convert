@@ -138,7 +138,7 @@ module.exports = {
 		// this looks bad (probably having to do with the quake palette)
 		//-------------------------
 		//algorithm: 'random -0.1,0.1',
-		// algorithm: 'random -0.2,0.2',
+		//algorithm: 'random -0.2,0.2',
 		//algorithm: 'random -0.5,0.5',
 		//algorithm: 'random -0.7,0.7',
 		
