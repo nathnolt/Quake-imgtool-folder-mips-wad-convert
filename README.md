@@ -43,6 +43,11 @@ copy the !wadconfig.js into a folder and change it. You can specify settings for
 
 # Updates
 
+# v3
+- added support for scaling stuff
+- added support for max width / height
+- all textures will become multiple of 16 units, so that you don't get an error when you play the map
+
 # v2
 - added support for didder, and a bunch of other things it supports (recolor, brightness, contrast, saturation upscale, resize)
 - send me a DM if there are any questions about how to use it
