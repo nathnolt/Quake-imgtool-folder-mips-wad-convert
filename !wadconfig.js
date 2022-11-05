@@ -6,7 +6,13 @@
 // These are the custom overwrite settings for this wad.
 // this file can be put in any folder within input, and it will effect all the folders below it, 
 // overwriting settings set in folders above it.
-module.exports = {
+//
+// because this is a js file, we can do all sorts of interpolation, and stuff.
+const noFullBrights = {
+	removeFullbrightPixels: true,
+}
+
+const wadObj = {
 	// relativeOutputWadDir: './other-dir/',
 	// forceRebuilt: true,
 	// removeFullbrightPixels: false,
@@ -32,6 +38,9 @@ module.exports = {
 			removeFullbrightPixels: false,
 			//algorithm: 'edm Simple2D'
 			maxWidth: 128,
+			
+			// add some contrast
+			contrast: 0.2,
 			// maxHeight: 128,
 		},
 		'speccy': {
@@ -42,16 +51,22 @@ module.exports = {
 			recolor: '#00ff00 #0000ff #ff0000',
 		},
 		
-		// because of removeFullbrightPixels: true, this texture won't have fullbright pixels
-		'cliff_red_1': {
-			// skipDithering_nofullbright: false,
-			removeFullbrightPixels: true,
-			//algorithm: 'bayer 8x8'
-			
-			// add some contrast
-			contrast: 0.2,
-		},
+		'cliff_red_1': noFullBrights,
 	},
 	
 	// for the full list of settings, see config.js
 }
+
+/*
+const noFullbrights = [
+	'brick1',
+	'brick2',
+	'brick3'
+]
+
+noFullbrights.forEach(function(name) {
+	wadObj.textureOpts[name] = noFullBrights
+})
+*/
+
+module.exports = wadObj
