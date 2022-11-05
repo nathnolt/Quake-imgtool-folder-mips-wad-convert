@@ -213,17 +213,17 @@ module.exports = {
 	
 	// The command that is used to convert the imgs into mips
 	img2mipCommand(relativeToolPathFromImgFolder, imgName) {
-		return `${relativeToolPathFromImgFolder} --ext mip -c ${imgName}`
+		return `"${relativeToolPathFromImgFolder}" --ext mip -c "${imgName}"`
 	},
 	
 	// The command to build the wad from a mip folder
 	buildWadCommand(toolPath, outputWadDir, wadName, mipDir) {
-		return `${toolPath} -w ${outputWadDir}${wadName}.wad ${mipDir}`
+		return `"${toolPath}" -w "${outputWadDir}${wadName}.wad" "${mipDir}"`
 	},
 	
 	// The command to convert all the wads back into pngs
 	wad2pngsCommand(toolPath, outputWadDir, wadName) {
-		return `${toolPath} -x --ext png ${outputWadDir}${wadName}.wad`
+		return `"${toolPath}" -x --ext png "${outputWadDir}${wadName}.wad"`
 	},
 	
 	
@@ -231,13 +231,13 @@ module.exports = {
 	// for every format which diddler does not support.
 	// I suppose we have a convertion array with every extension that needs to be converted, where they will all be converted into a png.
 	img2pngCommand(relativeToolPath, imgName) {
-		return `${relativeToolPath} -c --ext png ${imgName}`
+		return `"${relativeToolPath}" -c --ext png "${imgName}"`
 	},
 	
 	// the command to convert the image to a dithered potentially color changed upscaled resized image
 	// uses didder ( https://github.com/makeworld-the-better-one/didder )
 	didderConvertCommand(relativeToolPath, imgNameWithExt, imgName, palette, algorithm, extraStr) {
-		return `${relativeToolPath} -i ${imgNameWithExt} -o dithered/${imgName}.png -p "${palette}" ${extraStr}${algorithm}`
+		return `"${relativeToolPath}" -i "${imgNameWithExt}" -o "dithered/${imgName}.png" -p "${palette}" ${extraStr}${algorithm}`
 	}
 	
 }

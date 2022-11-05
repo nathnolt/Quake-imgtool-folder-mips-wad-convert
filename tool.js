@@ -1173,7 +1173,7 @@ function getFileNames(inputDir, filterExtensionArr) {
 }
 
 /**
-* creates a function that compares the result of the the value called within the returned function to a 
+* creates a function that compares the result of the value called within the returned function to a 
 * value set during creation of the function.
 */
 function funcRetEq(func, filterExtArr) {
