@@ -1,7 +1,9 @@
-# Quake imgtool folders imgs -> mips -> wad
+# Quake imgtool folders imgs -> dithered -> mips -> wads
 A small NodeJS helper program to make the UX of making wads way better. uses the ftetools's imgtool command line tool for the heavy lifting ( See https://fte.triptohell.info/moodles/win64/ )
+Supports dithering using didder ( https://github.com/makeworld-the-better-one/didder )
 
-The goal of this tool is to make working with textures a breeze, rather than a pain.
+# Why a new tool
+Because some people want to manage all of their wads with a single tool.
 
 
 # Preparation
@@ -18,7 +20,7 @@ The goal of this tool is to make working with textures a breeze, rather than a p
 4. the wad files should get built . Every time you edit the images you have to execute the command again. Only the updated wads will get built.
 
 
-## Usage Options
+# Usage Options
 - `node tool.js` for help
 - `node tool.js -d` to convert from folders with image files to wads
 - `node tool.js -r` to convert all wads into folders with pngs which go into the config.pngOutputWadDir folder (wad-exports by default)
@@ -28,6 +30,14 @@ The goal of this tool is to make working with textures a breeze, rather than a p
 # Info about usage
 - The name of the folders will be the names of the wads and the names of the image files will be the names of the textures within the wad
 - add a wadconfig.js to the folder, see wadconfig.example.js and config.js for what you can add.
+
+# Configuration
+
+## Tool and defaults
+config.js has the config for the tool itself, and a default wad config
+
+## Per wad
+copy the !wadconfig.js into a folder and change it. You can specify settings for the entire wad, and override settings per texture. See config.js -> defualtWadConfig for all of the options.
 
 
 # Updates
