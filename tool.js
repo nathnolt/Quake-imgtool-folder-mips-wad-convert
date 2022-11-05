@@ -277,21 +277,12 @@ function defaultRoute() {
 	} else
 	// This is the case for forceSingle name being set
 	{
-		const normalizedPath = normalizeFolder(inputDir + forceSingleName)
+		const folderObjs = getFolderObjs(inputDir)
+		const filteredFolders = folderObjs.filter(function(folderObj) {
+			return folderObj.name == forceSingleName
+		})
 		
-		// Check if it exists
-		if(!pathExists(normalizedPath)) {
-			console.error(cc.bgred, 'ERROR', cc.r, 'item does not exist:', forceSingleName)
-			process.exit(1)
-		}
-		// Extract the dirname from normalizedPath
-		let normalized
-		{
-			const pathArr = normalizedPath.split(/\\|\//)
-			normalized = pathArr.slice(-2, -1)[0]
-		}
-		console.log('Recreate only', normalized)
-		doFolder(normalized)
+		filteredFolders.forEach(doFolder)
 	}
 }
 
