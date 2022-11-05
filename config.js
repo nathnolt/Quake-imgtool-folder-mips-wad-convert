@@ -18,23 +18,10 @@
 // 
 
 
-
-// if edmAlgoSerp is true, it will go left->right, 
-// right->left alternation every row.
-// if false, it will go left-> every row.
-// this only applies to edm (error diffusion matrix) dithering algorithms.
-var edmAlgoSerp = false
-if(edmAlgoSerp == true) {
-	edmAlgoSerp = '-s '
-} else {
-	edmAlgoSerp = ''
-}
-
-
 module.exports = {
 	inputDir: 'input',
-	// outputWadDir: 'C:/games/quake1/wads',
-	outputWadDir: 'output',
+	outputWadDir: 'C:/games/quake1/wads',
+	// outputWadDir: 'output',
 	
 	// The output folder of the reverse method.
 	pngOutputDir: 'wad-exports',
@@ -43,7 +30,10 @@ module.exports = {
 	didderToolPath: 'didder_1.1.0.exe',
 	
 	// This is the global config for all of the WADS.
-	// this object is the same as the module.exports on a wadconfig.js
+	// 
+	// this object is the same as the module.exports on a wadconfig.js 
+	//   (or as the object inside of textureOpts)
+	// 
 	defaultWadConfig: {
 		// if set to true, none of next settings regarding fullbright / dithering stuff is supported, but it saves on disk space.
 		// basically, you can set it to true if you don't want any translation of the images, either for everything or each wad seperately.
@@ -51,13 +41,20 @@ module.exports = {
 		
 		// removes the fullbright pixels from the palette, so kinda does the same thing as removeFullbright, 
 		// except it will dither the fullbright pixels.
-		removeFullbrightPixels: false, // it's false by default because we do want fullbrights in certain textures. and it can be turned off/on for specific textures
+		removeFullbrightPixels: false, // it's false by default because we do want fullbrights in certain textures. It can be turned off/on for specific textures
 		//removeFullbrightPixels: true,
 		
+		
+		
+		
+		
+		// All of the next settings inside of defaultWadConfig need didder to be activated in order to work. 
+		// Meaning: skipDithering_nofullbright: false is required
+		// 
 		//-----------------------------
 		//
 		// Dithering settings
-		//
+		// 
 		//-----------------------------
 		// 
 		// So, there are 2 types of dithering, either those which work with patterns (random, bayer, ordered (odm)), or error diffusion (edm).
@@ -79,18 +76,8 @@ module.exports = {
 		// These are the best because they work with errors, meaning that images
 		// which are already in the pallette won't change at all.
 		//--------------------------------
-		algorithm: `edm ${edmAlgoSerp}FloydSteinberg`, // the default
-		//algorithm: `edm ${edmAlgoSerp}Simple2D`,
-		//algorithm: `edm ${edmAlgoSerp}FalseFloydSteinberg`,
-		//algorithm: `edm ${edmAlgoSerp}Stucki`,
-		//algorithm: `edm ${edmAlgoSerp}Burkes`,
-		//algorithm: `edm ${edmAlgoSerp}Sierra`,
-		//algorithm: `edm ${edmAlgoSerp}TwoRowSierra`,
-		//algorithm: `edm ${edmAlgoSerp}SierraLite`,
-		//algorithm: `edm ${edmAlgoSerp}StevenPigeon`,
 		
-		
-		//algorithm: `edm FloydSteinberg`, // the default
+		algorithm: `edm FloydSteinberg`, // the default
 		//algorithm: `edm Simple2D`,
 		//algorithm: `edm FalseFloydSteinberg`,
 		//algorithm: `edm Stucki`,
@@ -100,6 +87,19 @@ module.exports = {
 		//algorithm: `edm SierraLite`,
 		//algorithm: `edm StevenPigeon`,
 		
+		
+		// the same as before but serpentine 
+		// (instead of going left-> every row, it alternates)
+		//algorithm: `edm -s FloydSteinberg`, // the default
+		//algorithm: `edm -s Simple2D`,
+		//algorithm: `edm -s FalseFloydSteinberg`,
+		//algorithm: `edm -s Stucki`,
+		//algorithm: `edm -s Burkes`,
+		//algorithm: `edm -s Sierra`,
+		//algorithm: `edm -s TwoRowSierra`,
+		//algorithm: `edm -s SierraLite`,
+		//algorithm: `edm -s StevenPigeon`,
+
 		
 
 		
@@ -154,6 +154,7 @@ module.exports = {
 		//-------------------------------------------------
 		// recolor: '#ffffff #ff00ff #00ff00 #000000',
 		
+		
 		// strength: the strength of the dithering. 
 		// normal range = -1 to 1, other values produce interesting results (-10 for exmple)
 		//strength: 1,
@@ -161,9 +162,14 @@ module.exports = {
 		//strength: 0.1,
 		
 		
+		
+		
+		
 		//------------------------------
 		//
 		// Image modification settings
+		// 
+		// If you put some of these settings beyond their normal range, it doesn't fail, but instead you get weird results.
 		//
 		//------------------------------
 		
@@ -189,25 +195,108 @@ module.exports = {
 		//contrast: 0.2, // images look a bit more vibrant
 		
 		
+		
+		
+		
 		//-------------------
 		// 
 		// Resize settings. if only 1 param is given, it will maintain aspect ratio
 		// 
 		//-------------------
+		
+		
+		
+		// this is the factor to resize it to.
+		//------------------------------------
+		//scale: 0.5, // make it smaller
+		//scale: 1, // don't scale it
+		//scale: 2, // make it larger
+		// or support for array (to seperately scale X and Y, in that order)
+		//scale: [2], // make it larger
+		//scale: [2, 2], // make it larger
+		//scale: [2,1], // make it wider
+		//scale: [1,2], // make it taller
+		//scale: [0.75,2], // make it lanky
+		
+		
+		// limit the width / height to a specific size 
+		// (downscales the image, if it is larger)
+		// (will happen after scale)
+		//--------------------------------------------
+		//maxWidth: 64,
+		//maxHeight: 64,
+		
+		// 16 aligned fix:
+		// 
+		// Textures have to be an integer multiple of 16x16 units
+		// if images aren't aligned to 16x16 units, the engine will complain (not sure if all engines do)
+		//
+		// This next param will try to fix this
+		// it supports 3 ways of doing it
+		//  
+		//  - stretch = stretching it to a 16x16 multiple (will impact aspect ratio a lot, if the image is tiny)
+		//  - scale   = scale up till the image is a 16x16 multiple (the texture might become 16x the size
+		//              (it only scales by integers), you probably never want this one)
+		//  - smart   = smart mix between stretch and scale (this is the one you want in most cases)
+		//  - none    = don't try to fix it (will have a bit better performance)
+		// 
+		// This internally overwrites the width / height params. 
+		// If width / height are set, these won't do anything
+		
+		fix16AlignedMethod: 'smart',
+		//fix16AlignedMethod: 'stretch',
+		//fix16AlignedMethod: 'scale',
+		//fix16AlignedMethod: 'none',
+		
+		// Figured I make the multiple of 16 configurable
+		// in all honestly, you won't have to change this, ever, unless you want to have a bit of fun.
+		fix16Aligned_multiple: 16,
+		
+		// This defines the maximum size it will scale to, before it will stop scaling it upwards.
+		// after that it will use the stretched size, even if the percentage of change is larger than the treshold.
+		// maybe you want to change this to 256, if you want a bit smaller textures
+		// Note, if the textures are already large, this won't scale them down.
+		fix16AlignedSmart_maxTexSize: 512,
+		
+		// This defines the percentage of when it will squash the image.
+		// for example, if the image was 17x17, the nearest multiple of 16 is 16x16, 
+		// the percentage of difference between 17x17 and 16x16 is 6.25 ( (17 - 16) / 16 * 100 )
+		// if the percentage of change is above it, it will double the size of the image, and try again.
+		// 
+		// Example 2: The image is 12x12 , it will keep doubling the size untill it becomes 48x48
+		// the percentage of difference is now 0, because 48 is a multiple of 16
+		fix16AlignedSmart_stretchThresholdPercentage: 10,
+		
+		
+		
+		// these are the raw width and height params.
+		// when set, the images will be scaled to exactly this size.
+		// note that on the same define depth, it will overwrite scale and the fix16Aligned code.
+		// if you use these, you will only want to use them for speicif textures / wads ( see !wadconfig.js )
 		//width: 128,
 		//height: 128,
 		
-		// upscale after dithering
+		
+		// :: other resize settings ::
+		
+		// upscale after dithering (the other ones happen before the dithering). 
+		// (does not support 0.5 or something like that)
 		//upscale: 1, // no upscale
-		// upscale: 2, // 2 times the upscale (pixels will be more blocky)
+		//upscale: 2, // 2 times the upscale (pixels will be more blocky)
 	},
 	
-	// logs some things.
+	// logs the big steps for wads.
+	basicLog: true,
+	
+	// log the more precise steps for wads
 	pedanticLog: true,
+	
 	// logs some other things
 	imgtoolLog: false,
+	
 	// logs the executed commands
 	commandLog: false,
+	
 	// some other logs
 	devLog: false,
 	
@@ -224,6 +313,11 @@ module.exports = {
 	// The command to convert all the wads back into pngs
 	wad2pngsCommand(toolPath, outputWadDir, wadName) {
 		return `"${toolPath}" -x --ext png "${outputWadDir}${wadName}.wad"`
+	},
+	
+	// Get the size of the image, in order to make images aligned to 16x16 dimensions
+	imageInfoCommand(toolPath, imgNameWithExt) {
+		return `"${toolPath}" -i "${imgNameWithExt}"`
 	},
 	
 	

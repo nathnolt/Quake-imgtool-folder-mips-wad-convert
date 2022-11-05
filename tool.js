@@ -41,7 +41,8 @@ const cc = {
 	bgblue: '\u001b[44m',
 	bgcyan: '\u001b[46m',
 	bgred: '\u001b[41m',
-	bggreen: '\u001b[42m',
+	bgyellow: '\u001b[33;1m\u001b[7m',
+	bggreen: '\u001b[32m\u001b[7m',
 	bggrey: '\u001b[48;5;238m',
 	bgorange: '\u001b[48;5;202m',
 	r: '\u001b[0m',
@@ -58,7 +59,9 @@ const buildWadCommand = config.buildWadCommand
 const wad2pngsCommand = config.wad2pngsCommand
 const img2pngCommand = config.img2pngCommand
 const didderConvertCommand = config.didderConvertCommand
+const imageInfoCommand = config.imageInfoCommand
 const imgtoolLog = config.imgtoolLog
+const basicLog = config.basicLog
 const pedanticLog = config.pedanticLog
 const commandLog = config.commandLog
 const devLog = config.devLog
@@ -215,7 +218,7 @@ function reverseRoute() {
 			const pngEditDateItems = getEditDates(pngFolder, pngs)
 			const lastPngEditDate = getLastEditDate(pngEditDateItems)
 			if(lastPngEditDate > lastWadEditDate) {
-				if(pedanticLog) { console.log(`${cc.bggrey} pngs for ${wadName + '.wad'} ${cc.r} up 2 date`) }
+				console.log(`${cc.bggrey} pngs for ${wadName + '.wad'} ${cc.r} up 2 date`)
 				continue
 			}
 		}
@@ -355,6 +358,9 @@ function getWadConfig(folderPath) {
 	}
 	
 	const wadConfig = defaultWadConfig
+	const propDepth = {}
+	wadConfig.propDepth = propDepth
+	incrementDefineDepth(wadConfig, propDepth)
 	
 	// 2. build up an overwriteWadConfig
 	// loop through the path chain
@@ -378,6 +384,7 @@ function getWadConfig(folderPath) {
 			}
 			
 			if(overwriteConfig) {
+				incrementDefineDepth(overwriteConfig, propDepth)
 				ObjectAssignDeep(wadConfig, overwriteConfig)
 			}
 		}
@@ -414,8 +421,28 @@ function getWadConfig(folderPath) {
 	return wadConfig
 }
 
+/**
+* We have wadConfig, but for the scale and fix16AlignedMethod prop, we want to make it
+* so that when the width or height (or both) properties are set, it will overwrite
+* scale and fix16AlignedMethod. Now... A problem would arise if someone sets width/height properties in 1 directory, 
+* but then sets the scale and fix16AlignedMethod in a deeper directory :: the width and height props would propagate downwards.
+* if we had a depth level however, which indicated the level a property was defined at: we could alleviate these problems, 
+* by making scale / fix16AlignedMethod take precidence, whenever these settings were defined in a deeper level.
+* And we could do more as well.
+*/
+function incrementDefineDepth(wadConfig, propDepth) {
+	if(propDepth.currentDepth == undefined) {
+		propDepth.currentDepth = 0
+	}
+	propDepth.currentDepth++
+	// 2. loop though all of the keys in the wadConfig (minus propDepth)
+	for(let k in wadConfig) {
+		propDepth[k] = propDepth.currentDepth
+	}
+}
 
 
+// convert a string with slashes into an array of items in between the slashes
 function getPathItems(path) {
 	return path.split(/\\|\//)
 }
@@ -535,7 +562,7 @@ function buildWadForFolder(folderPath, folderName, wadConfig, imgEditDateItems) 
 
 
 function convertUnsupportedToPng(folderPath, imgEditDateItems, wadConfig) {
-	console.log('converting unsupported images to png')
+	if(basicLog) { console.log('converting unsupported images to png') }
 	// 0. define some vars for later usage
 	const relativeToolPath = path.relative(folderPath, toolPath)
 	const logFolderPath = getLogPath(thisPath, folderPath)
@@ -548,7 +575,7 @@ function convertUnsupportedToPng(folderPath, imgEditDateItems, wadConfig) {
 		
 		// 2. give an error when there are more than 2 items
 		if(sameNamedImages.length > 2 && pedanticLog) {
-			console.warn(`Item with name ${name} has more than 2 items. This could lead to unexpected behaviour.`)
+			console.warn(`${cc.bgyellow} WARN ${cc.r} Item with name ${name} has more than 2 items. This could lead to unexpected behaviour.`)
 		}
 		
 		// 3. get the supported item and the not supported item
@@ -606,6 +633,7 @@ function convertUnsupportedToPng(folderPath, imgEditDateItems, wadConfig) {
 * this handles the dithering and the fullbright fixing.
 */
 function convertToFullBrightFixedDithered(folderPath, wadConfig) {
+	if(basicLog) { console.log('dithering items') }
 	// 1. reobtain the items within the current folder path
 	const images = getFileNames(folderPath, supportedDidderTypes)
 	
@@ -623,6 +651,7 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 	// console.log('ditheredDateItems', ditheredDateItems)
 	
 	const relativeDidderToolPath = path.relative(folderPath, didderToolPath)
+	const relativeToolPath = path.relative(folderPath, toolPath)
 	const logFolderPath = getLogPath(thisPath, folderPath)
 	
 	
@@ -630,7 +659,16 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 	dateItemsExec(imgEditDateItems, ditheredDateItems, wadConfig.forceRebuilt, function(fromItem) {
 		const name = removeExtension(fromItem.fileName)
 		
+		// set textureOpts obj
 		const textureOpts = wadConfig?.textureOpts?.[name]
+		
+		// get the depth
+		const propDepth = Object.assign({}, wadConfig.propDepth)
+		if(textureOpts) {
+			incrementDefineDepth(textureOpts, propDepth) // inc
+		}
+		
+		// start handling the params.
 		if(textureOpts?.skipDithering_nofullbright) {
 			// we can remove the file from the dithered folder, when it exists
 			const ditheredFilePath = ditherFolderPath + fromItem.fileName
@@ -734,27 +772,296 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 			contrastStr = `--contrast ${contrast}`
 		}
 		
+		
 		// width
-		let widthStr = ''
+		
 		let width = wadConfig.width
 		if(textureOpts?.width != undefined) {
 			width = textureOpts?.width
 		}
-		if(width != undefined) {
-			widthStr = `-x ${width}`
-		}
 		
 		// height
-		let heightStr = ''
 		let height = wadConfig.height
 		if(textureOpts?.height != undefined) {
 			height = textureOpts?.height
 		}
+
+		
+		// get the define depth for width and height props. This way, 
+		// we know whether or not to do scale and fix16Aligned
+		const largestWidthHeightDepth = Math.max((propDepth.width||0), (propDepth.height||0))
+		
+		// used for scale and fix16aligncode
+		let sizeInfo
+		
+		// scale
+		let scale = wadConfig.scale
+		if(textureOpts?.scale != undefined) {
+			scale = textureOpts?.scale
+		}
+		const scaleDepth = propDepth.scale||0
+		
+		if(scale != undefined && scaleDepth > largestWidthHeightDepth) {
+			
+			// Convert it to the array syntax anyway
+			if(!Array.isArray(scale)) {
+				scale = [scale]
+			}
+			
+			// Convert it to the double array value
+			if(scale.length == 1) {
+				scale.push(scale[0])
+			}
+			
+			// get info about the size
+			if(sizeInfo == undefined) {
+				sizeInfo = getImageSizeInfo(relativeToolPath, fromItem.fileName, folderPath)
+			}
+			if(sizeInfo == undefined) { return }
+			
+			// scale it
+			sizeInfo.width = sizeInfo.width * scale[0]
+			sizeInfo.height = sizeInfo.height * scale[1]
+		}
+		
+		
+		let overwrite_fix16AlignedSmart_maxTexSize
+		
+		// maxWidth
+		let maxWidth = wadConfig.maxWidth
+		if(textureOpts?.maxWidth != undefined) {
+			maxWidth = textureOpts?.maxWidth
+		}
+		const maxWidthDepth = propDepth.maxWidth||0
+		
+		// maxHeight
+		let maxHeight = wadConfig.maxHeight
+		if(textureOpts?.maxHeight != undefined) {
+			maxHeight = textureOpts?.maxHeight
+		}
+		const maxHeightDepth = propDepth.maxHeight||0
+		
+		if(
+			(maxWidth != undefined && maxWidthDepth > largestWidthHeightDepth) ||
+			(maxHeight != undefined && maxHeightDepth > largestWidthHeightDepth)
+		) {
+			// get info about the size
+			if(sizeInfo == undefined) {
+				sizeInfo = getImageSizeInfo(relativeToolPath, fromItem.fileName, folderPath)
+			}
+			if(sizeInfo == undefined) { return }
+			
+			
+			// To fix issues with fix16 making it too large, we set fix16AlignedSmart_maxTexSize
+			overwrite_fix16AlignedSmart_maxTexSize = Math.max(maxWidth||0, maxHeight||0)
+			
+			const imageAspectRatio = sizeInfo.width / sizeInfo.height
+			
+			// set the vars so that if they aren't defined, they become the size of the current image, 
+			// so it's not the factor that will downscale it.
+			if(maxWidth == undefined) { maxWidth = sizeInfo.width }
+			if(maxHeight == undefined) { maxHeight = sizeInfo.height }
+			
+			if(
+				maxWidth >= sizeInfo.width &&
+				maxHeight >= sizeInfo.height
+			) {
+				// we don't need to do anything in this case, because both sizes are larger
+			} else {
+				const maxSizeAspectRatio = maxWidth / maxHeight
+				
+				// 
+				let scaleFactor
+				if(imageAspectRatio > maxSizeAspectRatio) {
+					// scale the width
+					scaleFactor = maxWidth / sizeInfo.width
+				} else {
+					// scale the height
+					scaleFactor = maxHeight / sizeInfo.height
+				}
+				
+				sizeInfo.width = sizeInfo.width * scaleFactor
+				sizeInfo.height = sizeInfo.height * scaleFactor
+			}
+		}
+		
+		
+		// fix16AlignedMethod code.
+		let fix16AlignedMethod = wadConfig.fix16AlignedMethod
+		if(textureOpts?.fix16AlignedMethod != undefined) {
+			fix16AlignedMethod = textureOpts?.fix16AlignedMethod
+		}
+		
+		
+		const fix16AlignedMethodDepth = propDepth.fix16AlignedMethod||0
+		
+		if(fix16AlignedMethod != undefined && fix16AlignedMethod != 'none' && fix16AlignedMethodDepth > largestWidthHeightDepth) {
+			
+			const valids = [
+				'stretch',
+				'scale',
+				'smart'
+			]
+			
+			if(valids.indexOf(fix16AlignedMethod) == -1) {
+				console.warn(`${cc.bgyellow} WARN ${cc.r} invalid fix16AlignedMethod: ${fix16AlignedMethod}`)
+			} else {
+				
+				// valid fix16AlignedMethod value
+				if(sizeInfo == undefined) {
+					sizeInfo = getImageSizeInfo(relativeToolPath, fromItem.fileName, folderPath)
+				}
+				if(sizeInfo == undefined) { return }
+				
+				const multiple = wadConfig.fix16Aligned_multiple || 16
+				if(
+					sizeInfo.width % multiple == 0 &&
+					sizeInfo.height % multiple == 0
+				) {
+					// Nothing needs to be done to fix it, because the image currently is already exactly a multiple 
+				    // of the multiple
+				} else {
+					
+					const halfMultiple = multiple / 2
+					function fixStretchComponent(curSize, restVal) {
+						if(restVal < halfMultiple) {
+							let newVal = curSize - restVal
+							if(newVal == 0) {
+								newVal = multiple
+							}
+							return newVal
+						} else {
+							const inc = multiple - restVal
+							return curSize + inc
+						}
+					}
+					
+					let beforeSize
+					if(pedanticLog) {
+						beforeSize = Object.assign({}, sizeInfo)
+					}
+					
+					if(fix16AlignedMethod == 'stretch') {
+						
+						const restWidth = sizeInfo.width % multiple
+						const restHeight = sizeInfo.height % multiple
+
+						
+						sizeInfo.width = fixStretchComponent(sizeInfo.width, restWidth)
+						sizeInfo.height = fixStretchComponent(sizeInfo.height, restHeight)
+						
+					} else
+					if(fix16AlignedMethod == 'scale') {
+						let restWidth = sizeInfo.width % multiple
+						let restHeight = sizeInfo.height % multiple
+						
+						let lpc = 0
+						while(restWidth != 0 || restHeight != 0) {
+							if(lpc++ > 50) { // infinite loop prevention counter
+								console.error('broken out of scale method loop')
+								process.exit(1)
+							}
+							
+							// double the size
+							sizeInfo.width = sizeInfo.width * 2
+							sizeInfo.height = sizeInfo.height * 2
+							
+							// recalculate
+							restWidth = sizeInfo.width % multiple
+							restHeight = sizeInfo.height % multiple
+						}
+						
+					} else { // smart
+						
+						// the 10 is chosen arbitrarily. we devide by 100 because we want it as a fraction.
+						const stretchTreshold = (wadConfig.fix16AlignedSmart_stretchThresholdPercentage || 10) / 100
+						const maxTexSize = overwrite_fix16AlignedSmart_maxTexSize || wadConfig.fix16AlignedSmart_maxTexSize || 512
+						
+						// the code is going to be as follows:
+						// it will loop untill the fraction is below the treshold.
+
+						
+						let lpc = 0
+						while(true) {
+							if(lpc++ > 50) { // infinite loop prevention counter
+								console.error('broken out of smart method loop')
+								process.exit(1)
+							}
+							
+							const restWidth = sizeInfo.width % multiple
+							const restHeight = sizeInfo.height % multiple
+							
+							// get proposed values from stretch results
+							const newWidth = fixStretchComponent(sizeInfo.width, restWidth)
+							const newHeight = fixStretchComponent(sizeInfo.height, restHeight)
+							
+							// get the stretch offsets
+							const widthOffset = Math.abs((newWidth - sizeInfo.width) / sizeInfo.width)
+							const heightOffset = Math.abs((newHeight - sizeInfo.height) / sizeInfo.height)
+							const totalStretchOffset = widthOffset + heightOffset
+							
+							// check if they are below the treshold
+							if(totalStretchOffset < stretchTreshold) {
+								sizeInfo.width = newWidth
+								sizeInfo.height = newHeight
+								break
+							} else {
+								// Double the size
+								const doubleWidth = sizeInfo.width * 2
+								const doubleHeight = sizeInfo.height * 2
+								
+								// but if this new size is too large
+								if(Math.max(doubleWidth, doubleHeight) >= maxTexSize) { // maybe > instead of >=
+									sizeInfo.width = newWidth
+									sizeInfo.height = newHeight
+									break
+								} else {
+									// else choose the new size, and test again.
+									sizeInfo.width = doubleWidth
+									sizeInfo.height = doubleHeight
+								}
+							}
+							
+						}
+						
+					}
+					
+					if(pedanticLog) {
+						const beforeStr = beforeSize.width + ',' + beforeSize.height
+						const afterStr = sizeInfo.width + ',' + sizeInfo.height
+						console.log(`resized ${name} with method ${fix16AlignedMethod} to be ${multiple} aligned (${beforeStr} -> ${afterStr})`)
+					}
+					
+				}
+			}
+		}
+		
+		
+		// set the width and height params, based on sizeInfo
+		if(sizeInfo != undefined) {
+			// not sure if round is the best, or if I should do floor
+			width = Math.round(sizeInfo.width)
+			height = Math.round(sizeInfo.height)
+		}
+		
+		
+		// set the width and height strings based on width and height vars
+		//
+		// (either from width / height props, or scale, or fix16AlignedMethod, 
+		// or a combination of scale and fix16AlignedMethod)
+		// 
+		let widthStr = ''
+		if(width != undefined) {
+			widthStr = `-x ${width}`
+		}
+		
+		let heightStr = ''
 		if(height != undefined) {
 			heightStr = `-y ${height}`
 		}
 		
-		// upscale
+		
+		// upscale (this happens after the dithering)
 		let upscaleStr = ''
 		let upscale = wadConfig.upscale
 		if(textureOpts?.upscale != undefined) {
@@ -763,6 +1070,8 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 		if(upscale != undefined) {
 			upscaleStr = `-u ${upscale}`
 		}
+		
+		
 		
 		// extra str
 		let extraStr = ''
@@ -788,7 +1097,7 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 		if(extraStr != '') { extraStr += ' ' }
 		
 		// build it.
-		console.log(`dithering ${fromItem.fileName}`)
+		if(pedanticLog){ console.log(`dithering ${fromItem.fileName}`) }
 		const shellCommand = didderConvertCommand(relativeDidderToolPath, fromItem.fileName, name, palette, algorithm, extraStr)
 		if(commandLog) { console.log(`png 2 dithered command: ${shellCommand}`)}
 		const result = executeShellScript(shellCommand, {cwd: folderPath})
@@ -866,9 +1175,9 @@ function buildMips(folderPath, wadConfig) {
 	}
 	
 	// 7. loop through the items, and build the mips.
-	console.log('mipping items')
+	if(basicLog) { console.log('mipping items') }
 	for(const dateItem of toBuildDateItems) {
-		console.log(`  ${dateItem.fileName}`)
+		if(pedanticLog){ console.log(`  ${dateItem.fileName}`) }
 		const shellCommand = img2mipCommand(relativePaths[dateItem.folderPath], dateItem.fileName)
 		if(commandLog) { console.log(`img 2 mip shell command: ${shellCommand}`)}
 		const result = executeShellScript(shellCommand, {cwd: dateItem.folderPath})
@@ -888,7 +1197,7 @@ function buildMips(folderPath, wadConfig) {
 	const normalFolderMipDateItems = getEditDates(folderPath, normalFolderMips)
 	const ditheredFolderMipDateItems = getEditDates(ditheredFolderPath, ditheredFolderMips)
 	const combinedMips = normalFolderMipDateItems.concat(ditheredFolderMipDateItems)
-	console.log('moving mips...')
+	if(basicLog) { console.log('moving mips...') }
 	for(const mipItem of combinedMips) {
 		const oldMipPath = mipItem.folderPath + mipItem.fileName
 		const newMipPath = mipFolderPath + mipItem.fileName
@@ -979,6 +1288,32 @@ function convertImagesToMips(imgs2Convert, wadConfig, folderPath, logFolderPath)
 // 
 // More specific helper functions
 // 
+
+
+// executed in 2 different places, to get the size info of the image.
+function getImageSizeInfo(relativeToolPath, fileName, folderPath) {
+	
+	// execute the command
+	const shellCommand = imageInfoCommand(relativeToolPath, fileName)
+	if(commandLog) { console.log(`get info: ${shellCommand}`)}
+	const result = executeShellScript(shellCommand, {cwd: folderPath})
+	if(!result.success) {
+		console.error(cc.bgred, 'get info ERROR', cc.r, (logFolderPath + fileName), result.error)
+		return
+	}
+	
+	// parse the msg
+	const msgArr = result.msg.split(/\s+/)
+	const sizeStr = msgArr[msgArr.length-2]
+	const sizes = sizeStr.split('*')
+	
+	// return the size
+	return {
+		width: Number(sizes[0]),
+		height: Number(sizes[1])
+	}
+}
+
 
 /**
 * We want to return the array of img items that have a newer edit date than the mip items, 
