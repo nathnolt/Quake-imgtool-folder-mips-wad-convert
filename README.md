@@ -3,7 +3,8 @@ A small NodeJS helper program to make the UX of making wads way better. uses the
 Supports dithering using didder ( https://github.com/makeworld-the-better-one/didder )
 
 # Why a new tool
-Because some people want to manage all of their wads with a single tool.
+Because some people want to manage all of their wads with a single tool. 
+I also think that this tool is faster if you want support for dithering.
 
 
 # Preparation
