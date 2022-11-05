@@ -20,8 +20,8 @@
 
 module.exports = {
 	inputDir: 'input',
-	outputWadDir: 'C:/games/quake1/wads',
-	// outputWadDir: 'output',
+	outputWadDir: 'output',
+	// outputWadDir: 'C:/games/quake1/wads',
 	
 	// The output folder of the reverse method.
 	pngOutputDir: 'wad-exports',
@@ -145,8 +145,8 @@ module.exports = {
 		// customPalette:
 		// change the palette that is used. cool for weird effects.
 		//------------------
-		// customPalette: '#000000 #444444 #888888 #ffffff', // hex syntax
-		// customPalette: '0,0,0 68,68,68 136,136,136 255,255,255', // rgb syntax
+		//customPalette: '#000000 #444444 #888888 #ffffff', // hex syntax
+		//customPalette: '0,0,0 68,68,68 136,136,136 255,255,255', // rgb syntax
 		
 		// recolor:
 		// recolor the image after the dithering process, where each nth color 
