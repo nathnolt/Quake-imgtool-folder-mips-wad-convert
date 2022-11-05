@@ -20,8 +20,8 @@
 
 module.exports = {
 	inputDir: 'input',
-	outputWadDir: 'output',
-	//outputWadDir: 'C:/games/quake1/wads',
+	outputWadDir: 'C:/games/quake1/wads',
+	// outputWadDir: 'output',
 	
 	// The output folder of the reverse method.
 	pngOutputDir: 'wad-exports',
