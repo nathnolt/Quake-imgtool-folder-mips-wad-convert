@@ -28,6 +28,12 @@
 // 
 
 
+// 
+// @todo: instead of doing the comparison of the squashed viewport in the fix16 by checking the difference percentage of each viewport, we should instead get the apect ratio (W / H) and then compare it to the previous one.
+// 
+// We should also try different scale values than just 2, by getting the aspect ratio, maybe seeing a pattern in the aspect ratio, or maybe getting the common factors of the W / H... Anways, somehow I need to try to do it times 1.5, 1.2 and these other kinds of fractional values, just because it might give us a better result in certain cases.
+// 
+
 
 // 0. initial stuff
 const fs = require('fs')
