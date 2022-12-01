@@ -1346,7 +1346,6 @@ function compareImgAndMipDateItems(imgEditDateItems, mipEditDateItems) {
 /**
 * Convert an array of dateItems into a map, where the removed 
 * extension of the fileName is the key
-* 
 */
 function convertDateItemsToMap(dateItems) {
 	const map = {}
@@ -1549,7 +1548,10 @@ function removeExtension(inputFile) {
 }
 
 /**
-* Normalize a folder
+* Normalize a folder.
+* Give an input like './bla' and it will normalise the path and add a / at the end
+* It will return an absolute path.
+* so the end result could become c:/games/bla/
 */
 function normalizeFolder(dirPath) {
 	dirPath = path.resolve(dirPath)
@@ -1560,6 +1562,11 @@ function normalizeFolder(dirPath) {
 	return path.normalize(dirPath)
 }
 
+/**
+* Get a logPath from the specified thisPath and folderPath.
+* Basically, it will return the way to get to the folderPath from the thisPath.
+* It kinda looks like the normalizeFolder function
+*/
 function getLogPath(thisPath, folderPath) {
 	let relPath = path.relative(thisPath, folderPath)
 	relPath = relPath.replace(/\\/g, '/')
