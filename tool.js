@@ -112,6 +112,7 @@ if(!pathExists(toolPath)) {
 	process.exit(1)
 }
 
+// Code for verifying that didder exists
 let didderExists = undefined
 function verifyDidderExistsWithError() {
 	didderExists = pathExists(didderToolPath)
@@ -209,7 +210,9 @@ function helpRoute() {
 
 
 
-// Actually do work
+/**
+* Converts the wads back into png files.
+*/
 function reverseRoute() {
 	// 1. get the wads
 	const wads = getFileNames(outputWadDir, ['wad'])
@@ -291,16 +294,18 @@ function defaultRoute() {
 			process.exit(1)
 		}
 		
-		folderObjs.forEach(doFolder)
+		folderObjs.forEach(defaultRoute_handleFolder)
 	} else
 	// This is the case for forceSingle name being set
 	{
 		const folderObjs = getFolderObjs(inputDir)
+		
+		const forceSingleArr = getPathItems(forceSingleName)
 		const filteredFolders = folderObjs.filter(function(folderObj) {
-			return folderObj.name == forceSingleName
+			return arrayItemsMatchInOrder(folderObj.parts, forceSingleArr)
 		})
 		
-		filteredFolders.forEach(doFolder)
+		filteredFolders.forEach(defaultRoute_handleFolder)
 	}
 }
 
@@ -312,7 +317,7 @@ function defaultRoute() {
 * and then does the building.
 * 
 */
-function doFolder(folderObj) {
+function defaultRoute_handleFolder(folderObj) {
 	// 1. setup
 	const folderName = folderObj.name
 	const folderPath = folderObj.path
@@ -329,7 +334,7 @@ function doFolder(folderObj) {
 	// 3. get the wadConfig
 	const wadConfig = getWadConfig(folderPath)
 	
-	// 4. set a forceRebuild flag on the wadConfig
+	// 5. set a forceRebuild flag on the wadConfig
 	wadConfig.forceRebuilt = forceRecreateFlag || wadConfig.forceRebuilt
 	
 	// 5. get the edit dates of the images, and check if the wad exists.
@@ -353,7 +358,7 @@ function doFolder(folderObj) {
 	// 7. if the wad does need to be build, go ahead and build it.
 	if(wadHasToBeBuilt) {
 		console.log('Building', cc.bgblue, (folderName + '.wad'), cc.r )
-		buildWadForFolder(folderPath, folderName, wadConfig, imgEditDateItems)
+		buildWadForFolder(folderObj, wadConfig, imgEditDateItems)
 	} else {
 		console.log(cc.bggrey, (folderName + '.wad'), cc.r, 'up 2 date.')
 	}
@@ -501,9 +506,40 @@ function ObjectAssignDeep(base, extender) {
 * 
 * the next thing is my idea of what it would look like, maybe it's possible.
 */
-function buildWadForFolder(folderPath, folderName, wadConfig, imgEditDateItems) {
+function buildWadForFolder(folderObj, wadConfig, imgEditDateItems) {
 	
-	// do the extra steps.
+	const folderName = folderObj.name
+	const folderPath = folderObj.path
+	const folderParts = folderObj.parts
+	
+	// 1. check FBR name settings.
+	{
+		let fullBrightSuffixNameMatchIndex
+		const fbrNameSettings = wadConfig.useFullbrightNames.folders
+		if(fbrNameSettings.fullbright) {
+			fullBrightSuffixNameMatchIndex = nameArrayMatchesArrayWithSuffixes(folderParts, wadConfig.fullBrightNameSuffixes)
+		}
+		
+		let noFullBrightSuffixNameMatchIndex
+		if(fbrNameSettings.nofullbright) {
+			noFullBrightSuffixNameMatchIndex = nameArrayMatchesArrayWithSuffixes(folderParts, wadConfig.noFullbrightNameSuffixes)
+		}
+		
+		const theSame = fullBrightSuffixNameMatchIndex == noFullBrightSuffixNameMatchIndex
+		const notTheSame = !theSame
+		
+		if(notTheSame) {
+			if(fullBrightSuffixNameMatchIndex > noFullBrightSuffixNameMatchIndex) {
+				console.log('Found fullbright suffix on folder')
+				wadConfig.removeFullbrightPixels = false
+			} else {
+				console.log('Found nofullbright suffix on folder')
+				wadConfig.removeFullbrightPixels = true
+			}
+		}
+	}
+	
+	// 2. Do the extra steps.
 	if(!wadConfig.skipDithering_nofullbright) {
 		// skip some steps I guess.
 		convertUnsupportedToPng(folderPath, imgEditDateItems, wadConfig)
@@ -648,13 +684,39 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 		let palette = fullPalette
 		if(wadConfig.removeFullbrightPixels) {
 			palette = nonFullbrightPalette
-			console.log('choosing smaller palette')
 		}
 		if(textureOpts?.removeFullbrightPixels != undefined) {
 			if(textureOpts?.removeFullbrightPixels) {
 				palette = nonFullbrightPalette
 			} else {
 				palette = fullPalette
+			}
+		}
+		
+		// Fullbright overwrite based on fileName suffix
+		{
+			let fullBrightSuffixNameMatchIndex
+			const fbrNameSettings = wadConfig.useFullbrightNames.files
+			if(fbrNameSettings.fullbright) {
+				fullBrightSuffixNameMatchIndex = nameArrayMatchesArrayWithSuffixes([name], wadConfig.fullBrightNameSuffixes)
+			}
+			
+			let noFullBrightSuffixNameMatchIndex
+			if(fbrNameSettings.nofullbright) {
+				noFullBrightSuffixNameMatchIndex = nameArrayMatchesArrayWithSuffixes([name], wadConfig.noFullbrightNameSuffixes)
+			}
+			
+			const theSame = fullBrightSuffixNameMatchIndex == noFullBrightSuffixNameMatchIndex
+			const notTheSame = !theSame
+			
+			if(notTheSame) {
+				if(fullBrightSuffixNameMatchIndex > noFullBrightSuffixNameMatchIndex) {
+					console.log('Found fullbright suffix on file')
+					palette = fullPalette
+				} else {
+					console.log('Found nofullbright suffix on file')
+					palette = nonFullbrightPalette
+				}
 			}
 		}
 		
@@ -1122,12 +1184,52 @@ function buildMips(folderPath, wadConfig) {
 		const chosenItemMipName = chosenItemName + '.mip'
 		const mipItem = mipDateItems.find(mipItem => { return mipItem.fileName == chosenItemMipName })
 		
-		// if there is no mip, or the editDate of chosenItem is later than the mipItem, it needs to get build
+		// If there is no mip, or the editDate of chosenItem is later than the mipItem, it needs to get build
 		if(wadConfig.forceRebuilt || mipItem == undefined || chosenItem.editDate > mipItem.editDate) {
 			toBuildDateItems.push(chosenItem)
 			continue
 		}
 	}
+	
+	// Handle fullbright / nofullbright suffix stuff for mips.
+	// Compare names, with suffix names, and non suffix names, and so on.
+	// Basically uses the 1 with last editDate. with it's base name.
+	// after this we have an object, with the baseName, and the item which we want to mip.
+	const allSuffixes = wadConfig.fullBrightNameSuffixes.concat(wadConfig.noFullbrightNameSuffixes)
+	const baseNamedToBuildItems = {}
+	for(const item of toBuildDateItems) {
+		const name = removeExtension(item.fileName)
+		const suffixLessName = stripSuffixes(name, allSuffixes)
+		if(baseNamedToBuildItems[suffixLessName] == undefined) {
+			baseNamedToBuildItems[suffixLessName] = []
+		}
+		baseNamedToBuildItems[suffixLessName].push(item)
+	}
+	for(const baseName in baseNamedToBuildItems) {
+		const array = baseNamedToBuildItems[baseName]
+		if(array.length > 1) {
+			
+			// get the item with the last editDate
+			let lastEditDate = array[0].editDate
+			let lastEditIndex = 0
+			for(let i = 1; i < array.length; i++) {
+				const item = array[i]
+				if(item.editDate > lastEditDate) {
+					lastEditDate = item.editDate
+					lastEditIndex = i
+				}
+			}
+			const lastItem = array[lastEditIndex]
+			
+			// set the array such that it only contains that item.
+			baseNamedToBuildItems[baseName] = [lastItem]
+		}
+		
+		// remove the array from the baseNamedToBuildItems
+		baseNamedToBuildItems[baseName] = baseNamedToBuildItems[baseName][0]
+	}
+	
+	
 	
 	// 6. Because we're converting items from 2 different paths, we also have to deal with 
 	//    2 different starting paths.
@@ -1142,7 +1244,8 @@ function buildMips(folderPath, wadConfig) {
 	
 	// 7. loop through the items, and build the mips.
 	if(basicLog) { console.log('mipping items') }
-	for(const dateItem of toBuildDateItems) {
+	for(const baseName in baseNamedToBuildItems) {
+		const dateItem = baseNamedToBuildItems[baseName]
 		if(pedanticLog){ console.log(`  ${dateItem.fileName}`) }
 		const shellCommand = img2mipCommand(relativePaths[dateItem.folderPath], dateItem.fileName)
 		if(commandLog) { console.log(`img 2 mip shell command: ${shellCommand}`)}
@@ -1165,10 +1268,14 @@ function buildMips(folderPath, wadConfig) {
 	const combinedMips = normalFolderMipDateItems.concat(ditheredFolderMipDateItems)
 	if(basicLog) { console.log('moving mips...') }
 	for(const mipItem of combinedMips) {
+		
+		const name = removeExtension(mipItem.fileName)
+		const suffixLessName = stripSuffixes(name, allSuffixes)
+		
 		const oldMipPath = mipItem.folderPath + mipItem.fileName
-		const newMipPath = mipFolderPath + mipItem.fileName
+		const newMipPath = mipFolderPath + suffixLessName + '.mip'
 		fs.renameSync(oldMipPath, newMipPath)
-		if(pedanticLog) { console.log(`  ${logFolderPaths[mipItem.folderPath] + mipItem.fileName} -> ${mipFolderLogPath + mipItem.fileName}`) }
+		if(pedanticLog) { console.log(`  ${logFolderPaths[mipItem.folderPath] + mipItem.fileName} -> ${mipFolderLogPath + suffixLessName + '.mip'}`) }
 	}
 	
 }
@@ -1448,6 +1555,14 @@ function getFolderObjs(dirPath) {
 				name: item.name,
 				path: normalizeFolder(dirPath + item.name)
 			}
+			
+			// Add the parts, so something like C:/quakeDev/wads/ will become ['c:', 'quakeDev', 'wads']
+			folderObj.parts = folderObj.path.split(path.sep)
+			if(folderObj.parts[folderObj.parts.length-1] == '') {
+				folderObj.parts.pop()
+			}
+			
+			// Push into folders array
 			folders.push(folderObj)
 			
 			// recurse
@@ -1581,4 +1696,71 @@ function arrPushArr(arr1, arr2) {
 */
 function getType(thing) {
 	return Object.prototype.toString.call(thing).slice(8, -1).toLowerCase()
+}
+
+/**
+ * Check if an array of names matches with an array of suffixes
+ * If any name matches, the index will become the index of the name which matches.
+ * We're executing this within the context of paths,
+ * And because we have 2 competing results, both could match, so we need to only consider the last.
+ */
+function nameArrayMatchesArrayWithSuffixes(names, suffixArray) {
+	let nameIndexMatches = -1
+	for(let i = 0; i < names.length; i++) {
+		const name = names[i]
+		let nameMatches = false
+		
+		for(const suffix of suffixArray) {
+			if(suffix === '') {
+				continue
+			}
+			if(name.endsWith(suffix)) {
+				nameMatches = true
+			}
+		}
+		
+		if(nameMatches) {
+			nameIndexMatches = i
+		}
+	}
+	
+	return nameIndexMatches
+}
+
+/**
+ * Returns whether the items in find appear in array, in that order
+ * 
+ * example:
+ * array: [1,2,3,4,5,6,7,8]
+ * find: [4,5]
+ * output: true
+ */
+function arrayItemsMatchInOrder(array, find) {
+	let findIndex = 0
+	for(const item of array) {
+		if(item == find[findIndex]) {
+			findIndex++
+			if(findIndex == find.length) {
+				return true
+			}
+		} else {
+			findIndex = 0
+		}
+	}
+	return false
+}
+
+/**
+ * Strips a matching suffix from suffixes off of a name
+ */
+function stripSuffixes(name, suffixes) {
+	for(const suffix of suffixes) {
+		if(suffix === '') {
+			continue
+		}
+		if(name.endsWith(suffix)) {
+			return name.slice(0, -suffix.length)
+		}
+	}
+	return name
 }

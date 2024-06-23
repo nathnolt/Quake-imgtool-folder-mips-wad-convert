@@ -43,6 +43,10 @@ copy the !wadconfig.js into a folder and change it. You can specify settings for
 
 # Updates
 
+# v4
+- added support for _fbr and _nofbr suffixes on files & folders.
+- made -d foldername syntax support work better, where you it scans all of the subfolders as well
+
 # v3
 - added support for scaling stuff
 - added support for max width / height
@@ -61,4 +65,10 @@ copy the !wadconfig.js into a folder and change it. You can specify settings for
 
 
 # todo
-Probably make it so that it's clear on how to use it / what it even is. But then again, pretty lazy now to do it.
+
+- look into: https://github.com/fhomolka/qpakman
+
+- support custom palettes somehow 
+	(Not sure if this is possible with imgtool)
+
+- Get feedback from people why this project is good / why it sucks.

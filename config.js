@@ -46,6 +46,24 @@ module.exports = {
 		
 		
 		
+		// fullbright overwrite for filenames / folders
+		fullBrightNameSuffixes: [
+			'_fbr'
+		],
+		noFullbrightNameSuffixes: [
+			'_nofbr'
+		],
+		// Whether to use the fullbright suffixes
+		useFullbrightNames: {
+			files: {
+				fullbright: true,
+				nofullbright: true,
+			},
+			folders: {
+				fullbright: true,
+				nofullbright: true,
+			}
+		},
 		
 		
 		// All of the next settings inside of defaultWadConfig need didder to be activated in order to work. 
