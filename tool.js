@@ -504,66 +504,6 @@ function buildWadForFolder(folderPath, folderName, wadConfig, imgEditDateItems) 
 	
 	buildMips(folderPath, wadConfig)
 	buildWadFromMips(folderPath, folderName, wadConfig)
-	
-	
-	// Just define the functions inline, so it's easier to develop in this debug style mode.
-	
-	// what the code was before.
-	if(false)
-	{
-		const mipFolder = normalizeFolder(folderPath + 'mip')
-		
-		const logFolderPath = getLogPath(thisPath, folderPath)
-		const logMipFolderPath = getLogPath(thisPath, mipFolder)
-		
-		// 1. create the mip folder if it doesn't exist
-		ensureFolder(mipFolder)
-		
-		// 2. compare the data of the mip files and the imgs, to determine which ones need to get built.
-		let imgs2Convert
-		if(pathExists(mipFolder) && !forceRecreateFlag) {
-			// compare the edit dates of the imgs and the mips to check which imgs we need to rebuild to mips
-			const mips = getFileNames(mipFolder, ['mip'])
-			const mipEditDateItems = getEditDates(mipFolder, mips)
-			imgs2Convert = compareImgAndMipDateItems(imgEditDateItems, mipEditDateItems)
-		} else {
-			imgs2Convert = imgEditDateItems
-		}
-		
-		
-		// 3. convert the imgs to mips
-		if(pedanticLog && imgs2Convert.length > 0) { console.log(cc.bgblue, 'converted', cc.r) }
-		const mipFileNames2Move = convertImagesToMips(imgs2Convert, wadConfig, folderPath, logFolderPath)
-		
-		// 4. move the mips to the mip subfolder
-		if(pedanticLog && mipFileNames2Move.length > 0) { console.log(cc.bgblue, 'moved', cc.r) }
-		for(let i = 0; i < mipFileNames2Move.length; i++) {
-			const mipFileName = mipFileNames2Move[i]
-			const oldMipPath = folderPath + mipFileName
-			const newMipPath = mipFolder + mipFileName
-			fs.renameSync(oldMipPath, newMipPath)
-			if(pedanticLog) { console.log(`  ${logFolderPath + mipFileName} -> ${logMipFolderPath + mipFileName}`) }
-		}
-		
-		// 5. build the wad file
-		const wadBuildShellCommand = buildWadCommand(toolPath, getLogPath(thisPath, wadConfig.outputWadDir), folderName, getLogPath(thisPath, mipFolder))
-		if(commandLog) { console.log(`wad build shell command: ${wadBuildShellCommand}`)}
-		const result = executeShellScript(wadBuildShellCommand, {cwd: thisPath})
-		if(!result.success) {
-			console.error(cc.bgred, 'imgtool ERROR', cc.r, 'Building wad:', (wadConfig.outputWadDir + folderName + '.wad'), result.error)
-			return
-		}
-		
-		// 6. wad file built.
-		if(imgtoolLog) {
-			const msg = result.msg.trim()
-			if(msg != '') {
-				cc.bgcyan + ' imgtool ' + cc.r, console.log(msg)
-			}
-		}
-		console.log(cc.bggreen, (folderName + '.wad'), cc.r, 'built' )
-		console.log('')
-	}
 }
 
 
