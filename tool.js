@@ -1312,52 +1312,6 @@ function buildWadFromMips(folderPath, folderName, wadConfig) {
 	console.log('')
 }
 
-
-
-
-/**
-* Convert the images to mips.
-* 
-* So: before this was really easy... with the new system,
-* if there are any images that need to be color converted, we need to do the following:
-* 
-* 1. convert any unsupported didder format into a didder supported one
-* 2. convert the images into their palleted versions
-* 3. then we can convert the images into the mips.
-* 
-* The most straightforward thing would be to do this per image, instead of doing it per step, because the process is more steps.
-* 
-*/
-function convertImagesToMips(imgs2Convert, wadConfig, folderPath, logFolderPath) {
-	
-	console.log(wadConfig)
-	
-	const mipFileNames2Move = []
-	
-	for(let i = 0; i < imgs2Convert.length; i++) {
-		const imgItem = imgs2Convert[i]
-		
-		const relativeToolPath = path.relative(folderPath, toolPath)
-		
-		const img2mipConvertShellCommand = img2mipCommand(relativeToolPath, imgItem.fileName)
-		if(commandLog) { console.log(`img 2 mip shell command: ${img2mipConvertShellCommand}`)}
-		const result = executeShellScript(img2mipConvertShellCommand, {cwd: folderPath})
-		if(!result.success) {
-			console.error(cc.bgred, 'imgtool ERROR', cc.r, 'Converting img to mip:', (logFolderPath + imgItem.fileName), result.error)
-			continue
-		}
-		
-		const mipFileName = removeExtension(imgItem.fileName) + '.mip'
-		mipFileNames2Move.push(mipFileName)
-		if(pedanticLog) { console.log(`  ${logFolderPath + imgItem.fileName} -> ${logFolderPath + mipFileName}`) }
-		if(imgtoolLog) { console.log(' ', cc.bgcyan + ' imgtool ' + cc.r, afterFirstLineIndentLog(indentStr1, result.msg)) }
-	}
-	
-	
-	return mipFileNames2Move
-}
-
-
 // 
 // More specific helper functions
 // 
@@ -1385,28 +1339,6 @@ function getImageSizeInfo(relativeToolPath, fileName, folderPath) {
 		width: Number(sizes[0]),
 		height: Number(sizes[1])
 	}
-}
-
-
-/**
-* We want to return the array of img items that have a newer edit date than the mip items, 
-* or build items that don't have a mip item at all.
-*/
-function compareImgAndMipDateItems(imgEditDateItems, mipEditDateItems) {
-	const imgs2convert = []
-	for(var i = 0; i < imgEditDateItems.length; i++) {
-		const imgItem = imgEditDateItems[i]
-		const mipItem = findMip(removeExtension(imgItem.fileName), mipEditDateItems)
-		if(!mipItem) {
-			imgs2convert.push(imgItem)
-		} else {
-			// Compare the img editDate to the mip editDate
-			if(imgItem.editDate > mipItem.editDate) {
-				imgs2convert.push(imgItem)
-			}
-		}
-	}
-	return imgs2convert
 }
 
 
@@ -1443,24 +1375,6 @@ function dateItemsExec(from, to, forceRecreate, fn) {
 		}
 	}
 }
-
-
-/**
-* sub function for compareImgAndMipDateItems.
-*/
-function findMip(name, mipEditDateItems) {
-	const mipFileName = name + '.mip'
-	
-	// lsearch within mipEditDateItems for mipFileName
-	for(let i = 0; i < mipEditDateItems.length; i++) {
-		const mipItem = mipEditDateItems[i]
-		if(mipItem.fileName == mipFileName) {
-			return mipItem
-		}
-	}
-	return false
-}
-
 
 function folderNameValid(folderName) {
 	if(skipFolderNames.indexOf(folderName) != -1) {
