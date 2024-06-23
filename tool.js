@@ -112,6 +112,15 @@ if(!pathExists(toolPath)) {
 	process.exit(1)
 }
 
+let didderExists = undefined
+function verifyDidderExistsWithError() {
+	didderExists = pathExists(didderToolPath)
+	if(!didderExists) {
+		console.error(cc.bgred, 'ERROR', cc.r, didderToolPath, 'not found: download the program from https://github.com/makew0rld/didder/releases')
+	}
+	return didderExists
+}
+
 ensureFolder(inputDir)
 ensureFolder(outputWadDir)
 ensureFolder(pngOutputDir)
@@ -580,6 +589,16 @@ function convertUnsupportedToPng(folderPath, imgEditDateItems, wadConfig) {
 */
 function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 	if(basicLog) { console.log('dithering items') }
+	
+	// check if didder exists.
+	if(didderExists == undefined) {
+		didderExists = verifyDidderExistsWithError()
+	}
+	if(!didderExists) {
+		console.log('Didder was not found, skipping dithering.')
+		return
+	}
+	
 	// 1. reobtain the items within the current folder path
 	const images = getFileNames(folderPath, supportedDidderTypes)
 	
@@ -1044,6 +1063,7 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 		
 		// build it.
 		if(pedanticLog){ console.log(`dithering ${fromItem.fileName}`) }
+		
 		const shellCommand = didderConvertCommand(relativeDidderToolPath, fromItem.fileName, name, palette, algorithm, extraStr)
 		if(commandLog) { console.log(`png 2 dithered command: ${shellCommand}`)}
 		const result = executeShellScript(shellCommand, {cwd: folderPath})
