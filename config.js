@@ -41,7 +41,7 @@ module.exports = {
 		
 		// removes the fullbright pixels from the palette, so kinda does the same thing as removeFullbright, 
 		// except it will dither the fullbright pixels.
-		removeFullbrightPixels: true, // it's false by default because we do want fullbrights in certain textures. It can be turned off/on for specific textures
+		removeFullbrightPixels: false, // it's false by default because we do want fullbrights in certain textures. It can be turned off/on for specific textures
 		//removeFullbrightPixels: true,
 		
 		
