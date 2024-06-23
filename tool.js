@@ -656,12 +656,79 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 	const logFolderPath = getLogPath(thisPath, folderPath)
 	
 	
-	// console.error('there are items in ditheredDateItems', ditheredDateItems, imgEditDateItems)
-	dateItemsExec(imgEditDateItems, ditheredDateItems, wadConfig.forceRebuilt, function(fromItem) {
+	
+	// Get a list of items we need to rebuild again:
+	const from = imgEditDateItems
+	const to = ditheredDateItems
+	const toBuildItems = []
+	for(const fromItem of from) {
+		const toItem = to.find((toItem) => toItem.fileName == fromItem.fileName)
+		if(wadConfig.forceRebuilt || toItem == undefined || fromItem.editDate > toItem.editDate) {
+			toBuildItems.push(fromItem)
+		}
+	}
+	
+	// Handle fullbright / nofullbright suffix stuff for images before dithering.
+	// Compare names, with suffix names, and non suffix names, and so on.
+	// Basically uses the 1 with last editDate. with it's base name.
+	// after this we have an object, with the baseName, and the item which we want to mip.
+	const allSuffixes = wadConfig.fullBrightNameSuffixes.concat(wadConfig.noFullbrightNameSuffixes)
+	const baseNamedToBuildItems = {}
+	for(const item of toBuildItems) {
+		const name = removeExtension(item.fileName)
+		const suffixLessName = stripSuffixes(name, allSuffixes)
+		if(baseNamedToBuildItems[suffixLessName] == undefined) {
+			baseNamedToBuildItems[suffixLessName] = []
+		}
+		baseNamedToBuildItems[suffixLessName].push(item)
+	}
+	for(const baseName in baseNamedToBuildItems) {
+		const array = baseNamedToBuildItems[baseName]
+		if(array.length > 1) {
+			
+			// get the item with the last editDate
+			let lastEditDate = array[0].editDate
+			let lastEditIndex = 0
+			for(let i = 1; i < array.length; i++) {
+				const item = array[i]
+				if(item.editDate > lastEditDate) {
+					lastEditDate = item.editDate
+					lastEditIndex = i
+				}
+			}
+			const lastItem = array[lastEditIndex]
+			
+			// set the array such that it only contains that item.
+			baseNamedToBuildItems[baseName] = [lastItem]
+		}
+		
+		// remove the array from the baseNamedToBuildItems
+		baseNamedToBuildItems[baseName] = baseNamedToBuildItems[baseName][0]
+	}
+	
+	// Loops through all images, and do dithering and all of the other things.
+	for(const baseName in baseNamedToBuildItems) {
+		const fromItem = baseNamedToBuildItems[baseName]
+		ditherSingleImage(fromItem, baseName)
+	}
+	
+	
+	/**
+	 * Handles dithering, and all of the other functionality Didder has to offer, for 1 single image.
+	 */
+	function ditherSingleImage(fromItem, baseName) {
 		const name = removeExtension(fromItem.fileName)
 		
 		// set textureOpts obj
-		const textureOpts = wadConfig?.textureOpts?.[name]
+		let textureOpts = wadConfig?.textureOpts?.[name]
+		
+		if(name !== baseName) {
+			const baseNameTextureOpts = wadConfig?.textureOpts?.[baseName]
+			const specificOpts = textureOpts
+			if(baseNameTextureOpts) {
+				textureOpts = Object.assign({}, baseNameTextureOpts, specificOpts)
+			}
+		}
 		
 		// get the depth
 		const propDepth = Object.assign({}, wadConfig.propDepth)
@@ -1126,14 +1193,14 @@ function convertToFullBrightFixedDithered(folderPath, wadConfig) {
 		// build it.
 		if(pedanticLog){ console.log(`dithering ${fromItem.fileName}`) }
 		
-		const shellCommand = didderConvertCommand(relativeDidderToolPath, fromItem.fileName, name, palette, algorithm, extraStr)
+		const shellCommand = didderConvertCommand(relativeDidderToolPath, fromItem.fileName, baseName, palette, algorithm, extraStr)
 		if(commandLog) { console.log(`png 2 dithered command: ${shellCommand}`)}
 		const result = executeShellScript(shellCommand, {cwd: folderPath})
 		if(!result.success) {
 			console.error(cc.bgred, 'didder ERROR', cc.r, 'Converting:', (logFolderPath + fromItem.fileName), result.error)
 			return
 		}
-	})
+	}
 }
 
 
@@ -1228,7 +1295,6 @@ function buildMips(folderPath, wadConfig) {
 		// remove the array from the baseNamedToBuildItems
 		baseNamedToBuildItems[baseName] = baseNamedToBuildItems[baseName][0]
 	}
-	
 	
 	
 	// 6. Because we're converting items from 2 different paths, we also have to deal with 
@@ -1360,20 +1426,6 @@ function convertDateItemsToMap(dateItems) {
 	}
 	
 	return map
-}
-
-/**
-* execute the fn, when the fromItem is newer than the toItem, 
-* or if the toItem doesn't exist for a fromItem
-*/
-function dateItemsExec(from, to, forceRecreate, fn) {
-	for(const fromItem of from) {
-		// search toItem
-		const toItem = to.find((toItem) => toItem.fileName == fromItem.fileName)
-		if(forceRecreate || toItem == undefined || fromItem.editDate > toItem.editDate) {
-			fn(fromItem)
-		}
-	}
 }
 
 function folderNameValid(folderName) {
